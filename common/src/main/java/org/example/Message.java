@@ -8,7 +8,7 @@ public class Message {
     private String receiver;
 
     public Message(String text, String sender, String receiver) {
-        this.id = 1;
+        this.id = 0;
         this.text = text;
         this.sender = sender;
         this.receiver = receiver;
@@ -34,3 +34,5 @@ public class Message {
     }
 
 }
+
+
