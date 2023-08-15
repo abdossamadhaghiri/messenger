@@ -64,7 +64,7 @@ public class CommandProcessor {
     private static void signInUser() {
         HttpEntity<User> request = new HttpEntity<>(new User(onlineUsername));
         String URL = "http://localhost:9000/users";
-        User newUser = restTemplate.postForObject(URL, request, User.class);
+        restTemplate.postForObject(URL, request, User.class);
 
     }
 

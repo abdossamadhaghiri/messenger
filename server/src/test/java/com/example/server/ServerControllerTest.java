@@ -69,7 +69,7 @@ public class ServerControllerTest {
     public void newMessageTest() {
         HttpEntity<Message> request = new HttpEntity<>(new Message(1, "test text", "ali", "reza"));
         String URL = "http://localhost:" + port + "/messages";
-        Message newMessage = restTemplate.postForObject(URL, request, Message.class);
+        restTemplate.postForObject(URL, request, Message.class);
 
         List<Message> actual = ((List<Message>) messageRepository.findAll());
 
@@ -82,7 +82,7 @@ public class ServerControllerTest {
     public void newUserTest() {
         HttpEntity<User> request = new HttpEntity<>(new User("amin"));
         String URL = "http://localhost:" + port + "/users";
-        User newUser = restTemplate.postForObject(URL, request, User.class);
+        restTemplate.postForObject(URL, request, User.class);
 
         List<User> actual = ((List<User>) userRepository.findAll());
 
