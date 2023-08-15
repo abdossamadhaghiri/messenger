@@ -1,6 +1,6 @@
 package com.example.server;
 
-import org.example.Message;
+import org.example.Entity.Message;
 
 import java.util.ArrayList;
 import java.util.List;

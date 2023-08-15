@@ -1,7 +1,7 @@
 package com.example.client;
 
-import org.example.Message;
-import org.example.User;
+import org.example.Entity.Message;
+import org.example.Entity.User;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
