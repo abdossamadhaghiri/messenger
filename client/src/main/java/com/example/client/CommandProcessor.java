@@ -1,82 +1,90 @@
 package com.example.client;
 
 import org.example.Entity.Message;
-import org.example.Entity.User;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Scanner;
 
 public class CommandProcessor {
-    private static RestTemplate restTemplate;
+    private static WebClient client;
     private static String onlineUsername;
-
     private static Scanner scanner;
 
-    public static void run(RestTemplate restTemplate) {
+    public static void run() {
+        client = WebClient.create();
 
-        CommandProcessor.restTemplate = restTemplate;
-
-        System.out.println("enter your name: ");
         scanner = new Scanner(System.in);
-        onlineUsername = scanner.nextLine();
-        signInUser();
 
         while (true) {
-            showUsers();
-            System.out.println("select your chat: ");
-            String username = scanner.nextLine();
-            chat(username);
-
+            System.out.println("1. sign up\n2. sign in");
+            String option = scanner.nextLine();
+            if (option.equals("1")) {
+                signUp();
+            } else if (option.equals("2")) {
+                if (signIn()) {
+                    break;
+                }
+            } else {
+                System.out.println("invalid command!");
+            }
         }
 
-
-    }
-
-    private static void sendMessage(String text, String receiverUsername) {
-        HttpEntity<Message> request = new HttpEntity<>(new Message(text, onlineUsername, receiverUsername));
-        String URL = "http://localhost:9000/messages";
-        restTemplate.postForObject(URL, request, Message.class);
-
-    }
-
-    private static void showMessages(String sender, String receiver) {
-        String URL = "http://localhost:9000/messages/" + sender + "/" + receiver;
-        ResponseEntity<List<Message>> response = restTemplate.exchange(URL, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-        });
-        List<Message> messages = response.getBody();
-        for (Message message : messages) {
-            System.err.println(recognizeSender(message.getSender()) + ": " + message.getText());
+        while (true) {
+            List<String> usernamesExceptMe = getUsernamesExceptMe();
+            getUsernamesExceptMe().forEach(username -> System.out.println((usernamesExceptMe.indexOf(username) + 1) + ". " + username));
+            System.out.println("select your chat: (enter \"quit\" to terminate)");
+            String input = scanner.nextLine();
+            if (usernamesExceptMe.contains(input)) {
+                chat(input);
+            } else if (input.equals("quit")) {
+                break;
+            } else {
+                System.out.println("this username doesnt exist");
+            }
         }
     }
 
-    private static String recognizeSender(String sender) {
-        if (sender.equals(onlineUsername)) {
-            return "you";
-        }
-        return sender;
+    private static void signUp() {
+        System.out.println("enter your username: ");
+        String username = scanner.nextLine();
+        String URL = "http://localhost:9000/signUp";
+
+        ResponseEntity<String> response = client.post().uri(URL).bodyValue(username).retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
+        System.out.println(response.getBody());
+
     }
 
-    private static void signInUser() {
-        HttpEntity<User> request = new HttpEntity<>(new User(onlineUsername));
+    private static boolean signIn() {
+        System.out.println("enter your username: ");
+        String username = scanner.nextLine();
+        String URL = "http://localhost:9000/signIn/" + username;
+
+        ResponseEntity<String> response = client.get().uri(URL).retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
+
+        System.out.println(response.getBody());
+        if (response.getStatusCode().equals(HttpStatus.OK)) {
+            onlineUsername = username;
+            return true;
+        }
+        return false;
+
+    }
+
+    private static List<String> getUsernamesExceptMe() {
         String URL = "http://localhost:9000/users";
-        restTemplate.postForObject(URL, request, User.class);
 
-    }
+        ResponseEntity<List> response = client.get().uri(URL).retrieve().toEntity(List.class).block();
 
-    private static void showUsers() {
-        String URL = "http://localhost:9000/users";
-        ResponseEntity<List<String>> response = restTemplate.exchange(URL, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-        });
-        List<String> usernames = response.getBody();
-        for (String username : usernames) {
-            System.out.println((usernames.indexOf(username) + 1) + ". " + username);
-        }
-
+        List<String> allUsernamesExceptMe = response.getBody();
+        allUsernamesExceptMe.remove(onlineUsername);
+        return allUsernamesExceptMe;
     }
 
     private static void chat(String username) {
@@ -90,10 +98,37 @@ public class CommandProcessor {
                 sendMessage(text, username);
             } else if (option.equals("2")) {
                 break;
+            } else {
+                System.out.println("invalid command!");
             }
-
 
         }
     }
+
+    private static void showMessages(String sender, String receiver) {
+        String URL = "http://localhost:9000/messages/" + sender + "/" + receiver;
+
+        ResponseEntity<List<Message>> response = client.get().uri(URL).retrieve().toEntity(new ParameterizedTypeReference<List<Message>>() {
+        }).block();
+
+        List<Message> messages = response.getBody();
+        for (Message message : messages) {
+            System.err.println(recognizeSender(message.getSender()) + ": " + message.getText());
+        }
+    }
+
+    private static String recognizeSender(String sender) {
+        if (sender.equals(onlineUsername)) {
+            return "you";
+        }
+        return sender;
+    }
+
+    private static void sendMessage(String text, String receiverUsername) {
+        Message message = new Message(text, onlineUsername, receiverUsername);
+        String URL = "http://localhost:9000/messages";
+        client.post().uri(URL).bodyValue(message).retrieve().toEntity(String.class).block();
+    }
+
 
 }
