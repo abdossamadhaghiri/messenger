@@ -22,7 +22,7 @@ public class ClientApplication {
     }
 
     @Bean
-    public CommandLineRunner run(RestTemplate restTemplate) {
-        return args -> CommandProcessor.run(restTemplate);
+    public CommandLineRunner run() {
+        return args -> CommandProcessor.run();
     }
 }
