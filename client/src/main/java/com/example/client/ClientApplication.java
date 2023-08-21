@@ -3,26 +3,23 @@ package com.example.client;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
-
-import org.springframework.web.client.RestTemplate;
-
 
 @SpringBootApplication
 public class ClientApplication {
+
+    private final CommandProcessor commandProcessor;
 
     public static void main(String[] args) {
         SpringApplication.run(ClientApplication.class, args);
     }
 
-    @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.build();
+    public ClientApplication(CommandProcessor commandProcessor) {
+        this.commandProcessor = commandProcessor;
     }
 
     @Bean
     public CommandLineRunner run() {
-        return args -> CommandProcessor.run();
+        return args -> commandProcessor.run();
     }
 }
