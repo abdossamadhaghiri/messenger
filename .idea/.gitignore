@@ -2,6 +2,8 @@
 /sonarlint
 /shelf/
 /workspace.xml
+/dataSources.xml
+/sqldialects.xml
 # Editor-based HTTP Client requests
 /httpRequests/
 # Datasource local storage ignored files
