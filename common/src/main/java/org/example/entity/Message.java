@@ -21,7 +21,7 @@ public class Message {
 
     private @NonNull @Getter String sender;
 
-    private @NonNull @Getter String receiver;
+    private @NonNull @Getter Long chatId;
 
 }
 
