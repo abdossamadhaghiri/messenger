@@ -17,11 +17,13 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private @Getter @Setter int id;
 
-    private @NonNull @Getter String text;
+    private @NonNull @Setter @Getter String text;
 
     private @NonNull @Getter String sender;
 
     private @NonNull @Getter Long chatId;
+
+
 
 }
 

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 @Repository
-public interface MessageRepository extends ListCrudRepository<Message, Integer> {
+public interface MessageRepository extends ListCrudRepository<Message, Long> {
     List<Message> findMessagesByChatId(@NonNull Long chatId);
-
 }

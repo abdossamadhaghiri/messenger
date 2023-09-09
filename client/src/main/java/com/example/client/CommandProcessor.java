@@ -31,8 +31,11 @@ public class CommandProcessor {
     private @Setter String enterNewChatUrl;
     private @Setter String getChatIdUrl;
     private @Setter String sendMessageUrl;
+    private @Setter String deleteMessageUrl;
+    private @Setter String editMessageUrl;
     private @Setter String newGroupUrl;
     private @Setter String invalidCommand;
+    private @Setter String invalidId;
     private @Setter String pleaseTryAgain;
 
     public void run() {
@@ -144,15 +147,23 @@ public class CommandProcessor {
     private void chat(Long chatId) {
         while (true) {
             getMessagesInOldChat(chatId).getBody().forEach(message ->
-                    System.err.println(recognizeSender(message.getSender()) + ": " + message.getText()));
+                    System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + ": " + message.getText()));
 
-            System.out.println("1. send message\n2. back");
+            System.out.println("1. send message\n2. delete message\n3. edit message\n4. back");
             String option = scanner.nextLine();
             if (option.equals("1")) {
                 System.out.println("write your message:");
                 String text = scanner.nextLine();
                 System.out.println(sendMessage(text, chatId));
             } else if (option.equals("2")) {
+                System.out.println("enter your message id:");
+                Long messageId = Long.valueOf(scanner.nextLine());
+                deleteMessage(messageId, chatId);
+            } else if (option.equals("3")) {
+                System.out.println("enter your message id:");
+                Long messageId = Long.valueOf(scanner.nextLine());
+                editMessage(messageId, chatId);
+            } else if (option.equals("4")) {
                 break;
             } else {
                 System.out.println(invalidCommand);
@@ -166,7 +177,7 @@ public class CommandProcessor {
             if (response.getStatusCode().equals(HttpStatus.OK)) {
                 return true;
             }
-            System.out.println("invalid id!");
+            System.out.println(invalidId);
         } else {
             System.out.println(pleaseTryAgain);
         }
@@ -232,11 +243,15 @@ public class CommandProcessor {
                 String url = signInUrl + username;
                 ResponseEntity<String> response = client.get().uri(url).retrieve()
                         .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
-                if (response.getStatusCode().equals(HttpStatus.BAD_REQUEST)) {
-                    System.out.println(response.getBody());
+                if (response != null) {
+                    if (response.getStatusCode().equals(HttpStatus.BAD_REQUEST)) {
+                        System.out.println(response.getBody());
+                    } else {
+                        System.out.println(username + " successfully added.");
+                        members.add(username);
+                    }
                 } else {
-                    System.out.println(username + " successfully added.");
-                    members.add(username);
+                    System.out.println(pleaseTryAgain);
                 }
             } else if (option.equals("2")) {
                 break;
@@ -248,9 +263,35 @@ public class CommandProcessor {
         String url = newGroupUrl;
         Group group = new Group(onlineUsername, members, name);
         ResponseEntity<String> response = client.post().uri(url).bodyValue(group).retrieve().toEntity(String.class).block();
-        System.out.println(response.getBody());
+        if (response != null) {
+            System.out.println(response.getBody());
+        } else {
+            System.out.println(pleaseTryAgain);
+        }
+    }
+
+    private void deleteMessage(Long messageId, Long chatId) {
+        String url = deleteMessageUrl + "/" + messageId + "/" + chatId + "/" + onlineUsername;
+        ResponseEntity<String> response = client.delete().uri(url).retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
+        if (response != null) {
+            System.out.println(response.getBody());
+        } else {
+            System.out.println(pleaseTryAgain);
+        }
 
     }
 
+    private void editMessage(Long messageId, Long chatId) {
+        System.out.println("write your new message:");
+        String newText = scanner.nextLine();
+        String url = editMessageUrl + "/" + messageId + "/" + chatId + "/" + onlineUsername;
+        ResponseEntity<String> response = client.put().uri(url).bodyValue(newText).retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
+        if (response != null) {
+            System.out.println(response.getBody());
+        } else {
+            System.out.println(pleaseTryAgain);
+        }    }
 
 }
