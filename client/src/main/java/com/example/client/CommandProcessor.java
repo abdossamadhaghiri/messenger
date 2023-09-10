@@ -146,15 +146,15 @@ public class CommandProcessor {
 
     private void chat(Long chatId) {
         while (true) {
-            getMessagesInOldChat(chatId).getBody().forEach(message ->
-                    System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + ": " + message.getText()));
+            getMessagesInOldChat(chatId).getBody().forEach(this::printMessageInChat);
 
             System.out.println("1. send message\n2. delete message\n3. edit message\n4. back");
             String option = scanner.nextLine();
             if (option.equals("1")) {
                 System.out.println("write your message:");
                 String text = scanner.nextLine();
-                System.out.println(sendMessage(text, chatId));
+
+                System.out.println(writeMessage(text, chatId));
             } else if (option.equals("2")) {
                 System.out.println("enter your message id:");
                 Long messageId = Long.valueOf(scanner.nextLine());
@@ -168,6 +168,14 @@ public class CommandProcessor {
             } else {
                 System.out.println(invalidCommand);
             }
+        }
+    }
+
+    private void printMessageInChat(Message message) {
+        if (message.getRepliedMessageId() == 0L) {
+            System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + ": " + message.getText());
+        } else {
+            System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + " in reply to " + message.getRepliedMessageId() + ": " + message.getText());
         }
     }
 
@@ -223,10 +231,25 @@ public class CommandProcessor {
         return sender;
     }
 
-    private String sendMessage(String text, Long chatId) {
-        Message message = new Message(text, onlineUsername, chatId);
+    private String writeMessage(String text, Long chatId) {
+        System.out.println("1. send\n2. reply");
+        String option = scanner.nextLine();
+        long repliedMessageId = 0;
+        if (!option.equals("1") && !option.equals("2")) {
+            return invalidCommand;
+        }
+        if (option.equals("2")) {
+            System.out.println("enter your message id:");
+            repliedMessageId = Long.parseLong(scanner.nextLine());
+        }
+        return sendMessage(text, chatId, repliedMessageId);
+    }
+
+    private String sendMessage(String text, Long chatId, Long messageId) {
+        Message message = new Message(text, onlineUsername, chatId, messageId);
         String url = sendMessageUrl;
-        ResponseEntity<String> response = client.post().uri(url).bodyValue(message).retrieve().toEntity(String.class).block();
+        ResponseEntity<String> response = client.post().uri(url).bodyValue(message).retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
         return response != null ? response.getBody() : pleaseTryAgain;
     }
 
@@ -292,6 +315,6 @@ public class CommandProcessor {
             System.out.println(response.getBody());
         } else {
             System.out.println(pleaseTryAgain);
-        }    }
-
+        }
+    }
 }

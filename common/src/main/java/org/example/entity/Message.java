@@ -23,7 +23,7 @@ public class Message {
 
     private @NonNull @Getter Long chatId;
 
-
+    private @NonNull @Getter Long repliedMessageId;
 
 }
 

@@ -22,8 +22,7 @@ public class ServerController {
 
     @PostMapping("/signUp")
     public ResponseEntity<String> signUp(@RequestBody String username) {
-        Optional<User> user = userRepository.findById(username);
-        if (user.isPresent()) {
+        if (userRepository.existsById(username)) {
             return new ResponseEntity<>("this username already exists", HttpStatus.BAD_REQUEST);
         }
         userRepository.save(new User(username));
@@ -32,8 +31,7 @@ public class ServerController {
 
     @GetMapping("signIn/{username}")
     public ResponseEntity<String> signIn(@PathVariable String username) {
-        Optional<User> user = userRepository.findById(username);
-        if (user.isEmpty()) {
+        if (!userRepository.existsById(username)) {
             return new ResponseEntity<>("this username doesnt exist", HttpStatus.BAD_REQUEST);
         } else {
             return new ResponseEntity<>("successfully signed in", HttpStatus.OK);
@@ -42,17 +40,10 @@ public class ServerController {
 
     @GetMapping("/chats/{username}")
     public ResponseEntity<List<Chat>> getChats(@PathVariable String username) {
-        Optional<User> user = userRepository.findById(username);
-        if (user.isEmpty()) {
+        if (!userRepository.existsById(username)) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
         }
-        List<Chat> chats = new ArrayList<>();
-        for (Chat chat : chatRepository.findAll()) {
-            if (isInChats(username, chat)) {
-                chats.add(chat);
-            }
-        }
-        return new ResponseEntity<>(chats, HttpStatus.OK);
+        return new ResponseEntity<>(chatRepository.findAll().stream().filter(chat -> isInChats(username, chat)).toList(), HttpStatus.OK);
     }
 
     @GetMapping("/messages/{username}/{chatId}")
@@ -71,12 +62,12 @@ public class ServerController {
         Optional<User> secondUser = userRepository.findById(pv.getSecond());
         if (firstUser.isEmpty() || secondUser.isEmpty()) {
             return new ResponseEntity<>("username doesnt exist.", HttpStatus.BAD_REQUEST);
-        } else if (getPvByUsernames(pv.getFirst(), pv.getSecond()) != null) {
-            return new ResponseEntity<>("the chat already exists.", HttpStatus.BAD_REQUEST);
-        } else {
-            chatRepository.save(pv);
-            return new ResponseEntity<>("start your chat.", HttpStatus.OK);
         }
+        if (getPvByUsernames(pv.getFirst(), pv.getSecond()) != null) {
+            return new ResponseEntity<>("the chat already exists.", HttpStatus.BAD_REQUEST);
+        }
+        chatRepository.save(pv);
+        return new ResponseEntity<>("start your chat.", HttpStatus.OK);
     }
 
     private boolean isInChats(String myUsername, Chat chat) {
@@ -89,8 +80,8 @@ public class ServerController {
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
         for (Chat chat : chatRepository.findAll()) {
             if (chat instanceof Pv pv && ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
-                        (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
-                    return pv;
+                    (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
+                return pv;
 
             }
         }
@@ -108,8 +99,22 @@ public class ServerController {
 
     @PostMapping("/messages")
     public ResponseEntity<String> newMessage(@RequestBody Message newMessage) {
-        if (!userRepository.existsById(newMessage.getSender()) || !chatRepository.existsById(newMessage.getChatId())) {
-            return new ResponseEntity<>("invalid message content!", HttpStatus.BAD_REQUEST);
+        if (!userRepository.existsById(newMessage.getSender())) {
+            return new ResponseEntity<>("sender username doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        Optional<Chat> chat = chatRepository.findById(newMessage.getChatId());
+        if (chat.isEmpty()) {
+            return new ResponseEntity<>("the chat doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (!isInChats(newMessage.getSender(), chat.get())) {
+            return new ResponseEntity<>("the chat doesnt in sender's chats!", HttpStatus.BAD_REQUEST);
+        }
+        Optional<Message> repliedMessage = messageRepository.findById(newMessage.getRepliedMessageId());
+        if (!newMessage.getRepliedMessageId().equals(0L) && repliedMessage.isEmpty()) {
+            return new ResponseEntity<>("the replied message doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (repliedMessage.isPresent() && !newMessage.getChatId().equals(repliedMessage.get().getChatId())) {
+            return new ResponseEntity<>("the replied message doesnt in this chat!", HttpStatus.BAD_REQUEST);
         }
         messageRepository.save(newMessage);
         return new ResponseEntity<>("sent!", HttpStatus.OK);
