@@ -2,6 +2,7 @@ package com.example.server;
 
 import com.example.server.repository.ChatRepository;
 import com.example.server.repository.MessageRepository;
+import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import org.example.entity.*;
 import com.example.server.repository.UserRepository;
@@ -67,7 +68,7 @@ public class ServerController {
             return new ResponseEntity<>("the chat already exists.", HttpStatus.BAD_REQUEST);
         }
         chatRepository.save(pv);
-        return new ResponseEntity<>("start your chat.", HttpStatus.OK);
+        return new ResponseEntity<>("chat started.", HttpStatus.OK);
     }
 
     private boolean isInChats(String myUsername, Chat chat) {
@@ -116,6 +117,9 @@ public class ServerController {
         if (repliedMessage.isPresent() && !newMessage.getChatId().equals(repliedMessage.get().getChatId())) {
             return new ResponseEntity<>("the replied message doesnt in this chat!", HttpStatus.BAD_REQUEST);
         }
+        if (newMessage.getForwardedFrom() != null && !userRepository.existsById(newMessage.getForwardedFrom())) {
+            return new ResponseEntity<>("the \"forwarded from\" username doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
         messageRepository.save(newMessage);
         return new ResponseEntity<>("sent!", HttpStatus.OK);
     }
@@ -132,6 +136,17 @@ public class ServerController {
     @DeleteMapping("/messages/{messageId}/{chatId}/{username}")
     public ResponseEntity<String> deleteMessage(@PathVariable Long messageId, @PathVariable Long chatId, @PathVariable String username) {
         Optional<Message> message = messageRepository.findById(messageId);
+        Optional<Chat> chat = chatRepository.findById(chatId);
+        Optional<User> user = userRepository.findById(username);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>("the username doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (chat.isEmpty()) {
+            return new ResponseEntity<>("the chat doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (!isInChats(username, chat.get())) {
+            return new ResponseEntity<>("the chat doesnt in sender's chats!", HttpStatus.BAD_REQUEST);
+        }
         if (message.isEmpty()) {
             return new ResponseEntity<>("the message doesnt exist!", HttpStatus.BAD_REQUEST);
         }
@@ -146,8 +161,20 @@ public class ServerController {
     }
 
     @PutMapping("/messages/{messageId}/{chatId}/{username}")
-    public ResponseEntity<String> editMessage(@PathVariable Long messageId, @PathVariable Long chatId, @PathVariable String username, @RequestBody String newText) {
+    public ResponseEntity<String> editMessage(@PathVariable Long messageId, @PathVariable Long chatId,
+                                              @PathVariable String username, @RequestBody String newText) {
         Optional<Message> message = messageRepository.findById(messageId);
+        Optional<Chat> chat = chatRepository.findById(chatId);
+        Optional<User> user = userRepository.findById(username);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>("the username doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (chat.isEmpty()) {
+            return new ResponseEntity<>("the chat doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (!isInChats(username, chat.get())) {
+            return new ResponseEntity<>("the chat doesnt in sender's chats!", HttpStatus.BAD_REQUEST);
+        }
         if (message.isEmpty()) {
             return new ResponseEntity<>("the message doesnt exist!", HttpStatus.BAD_REQUEST);
         }
@@ -160,6 +187,40 @@ public class ServerController {
         message.get().setText(newText);
         messageRepository.save(message.get());
         return new ResponseEntity<>("the message edited!", HttpStatus.OK);
+    }
+
+    @PostMapping("/messages/{chatId}/{username}/{destinationChatId}")
+    public ResponseEntity<String> forwardMessage(@PathVariable Long chatId, @PathVariable String username,
+                                                 @PathVariable Long destinationChatId, @RequestBody Long messageId) {
+        Optional<Message> message = messageRepository.findById(messageId);
+        Optional<Chat> destinationChat = chatRepository.findById(destinationChatId);
+        Optional<Chat> chat = chatRepository.findById(chatId);
+        Optional<User> user = userRepository.findById(username);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>("the username doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (chat.isEmpty()) {
+            return new ResponseEntity<>("the chat doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (!isInChats(username, chat.get())) {
+            return new ResponseEntity<>("the chat doesnt in sender's chats!", HttpStatus.BAD_REQUEST);
+        }
+        if (message.isEmpty()) {
+            return new ResponseEntity<>("the message doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (!message.get().getChatId().equals(chatId)) {
+            return new ResponseEntity<>("the message doesnt in this chat!", HttpStatus.BAD_REQUEST);
+        }
+        if (destinationChat.isEmpty()) {
+            return new ResponseEntity<>("the destination chat doesnt exist!", HttpStatus.BAD_REQUEST);
+        }
+        if (!isInChats(username, destinationChat.get())) {
+            return new ResponseEntity<>("the destination chat doesnt in sender's chats!", HttpStatus.BAD_REQUEST);
+        }
+        Message forwardedMessage = new Message(message.get().getText(), username, destinationChatId, 0L);
+        forwardedMessage.setForwardedFrom(message.get().getSender());
+        messageRepository.save(forwardedMessage);
+        return new ResponseEntity<>("forwarded!", HttpStatus.OK);
     }
 
 

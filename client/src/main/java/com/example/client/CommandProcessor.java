@@ -72,13 +72,13 @@ public class CommandProcessor {
             if (option.equals("1")) {
                 System.out.println("enter your chat id:");
                 Long chatId = Long.valueOf(scanner.nextLine());
-                if (canEnterOldChat(chatId)) {
+                if (isOldChat(chatId)) {
                     chat(chatId);
                 }
             } else if (option.equals("2")) {
                 System.out.println("enter your username:");
                 String username = scanner.nextLine();
-                if (canStartNewChat(username)) {
+                if (isNewChat(username)) {
                     Long chatId = getChatId(username);
                     chat(chatId);
                 }
@@ -130,9 +130,9 @@ public class CommandProcessor {
     private void showChatList(List<Chat> chats) {
         for (Chat chat : chats) {
             if (chat instanceof Pv pv) {
-                System.out.println("- " + getPeer(pv) + ": " + chat.getId());
+                System.err.println(chat.getId() + ". " + getPeer(pv));
             } else {
-                System.out.println("- " + ((Group) chat).getName() + "(G): " + chat.getId());
+                System.err.println(chat.getId() + ". " + ((Group) chat).getName() + "(G)");
             }
         }
     }
@@ -147,13 +147,11 @@ public class CommandProcessor {
     private void chat(Long chatId) {
         while (true) {
             getMessagesInOldChat(chatId).getBody().forEach(this::printMessageInChat);
-
-            System.out.println("1. send message\n2. delete message\n3. edit message\n4. back");
+            System.out.println("1. send message\n2. delete message\n3. edit message\n4. forward message\n5. back");
             String option = scanner.nextLine();
             if (option.equals("1")) {
                 System.out.println("write your message:");
                 String text = scanner.nextLine();
-
                 System.out.println(writeMessage(text, chatId));
             } else if (option.equals("2")) {
                 System.out.println("enter your message id:");
@@ -164,6 +162,10 @@ public class CommandProcessor {
                 Long messageId = Long.valueOf(scanner.nextLine());
                 editMessage(messageId, chatId);
             } else if (option.equals("4")) {
+                System.out.println("enter your message id:");
+                Long messageId = Long.valueOf(scanner.nextLine());
+                selectDestinationChat(messageId, chatId);
+            } else if (option.equals("5")) {
                 break;
             } else {
                 System.out.println(invalidCommand);
@@ -172,14 +174,16 @@ public class CommandProcessor {
     }
 
     private void printMessageInChat(Message message) {
-        if (message.getRepliedMessageId() == 0L) {
-            System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + ": " + message.getText());
-        } else {
+        if (message.getRepliedMessageId() != 0L) {
             System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + " in reply to " + message.getRepliedMessageId() + ": " + message.getText());
+        } else if (message.getForwardedFrom() != null) {
+            System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + " forwarded from " + message.getForwardedFrom() + ": " + message.getText());
+        } else {
+            System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + ": " + message.getText());
         }
     }
 
-    private boolean canEnterOldChat(Long chatId) {
+    private boolean isOldChat(Long chatId) {
         ResponseEntity<List<Message>> response = getMessagesInOldChat(chatId);
         if (response != null) {
             if (response.getStatusCode().equals(HttpStatus.OK)) {
@@ -199,7 +203,7 @@ public class CommandProcessor {
                 }).block();
     }
 
-    private boolean canStartNewChat(String username) {
+    private boolean isNewChat(String username) {
         String url = enterNewChatUrl;
         Pv pv = new Pv(onlineUsername, username);
         ResponseEntity<String> response = client.post().uri(url).bodyValue(pv).retrieve()
@@ -245,8 +249,8 @@ public class CommandProcessor {
         return sendMessage(text, chatId, repliedMessageId);
     }
 
-    private String sendMessage(String text, Long chatId, Long messageId) {
-        Message message = new Message(text, onlineUsername, chatId, messageId);
+    private String sendMessage(String text, Long chatId, Long repliedMessageId) {
+        Message message = new Message(text, onlineUsername, chatId, repliedMessageId);
         String url = sendMessageUrl;
         ResponseEntity<String> response = client.post().uri(url).bodyValue(message).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
@@ -316,5 +320,33 @@ public class CommandProcessor {
         } else {
             System.out.println(pleaseTryAgain);
         }
+    }
+
+    private void selectDestinationChat(Long messageId, Long chatId) {
+        System.out.println("1. select chat\n2. enter a new username");
+        String option = scanner.nextLine();
+        if (option.equals("1")) {
+            System.out.println("enter your chat id:");
+            Long destinationChatId = Long.valueOf(scanner.nextLine());
+            if (isOldChat(destinationChatId)) {
+                System.out.println(forwardMessage(messageId, chatId, destinationChatId));
+            }
+        } else if (option.equals("2")) {
+            System.out.println("enter the username:");
+            String username = scanner.nextLine();
+            if (isNewChat(username)) {
+                Long destinationChatId = getChatId(username);
+                System.out.println(forwardMessage(messageId, chatId, destinationChatId));
+            }
+        } else {
+            System.out.println(invalidCommand);
+        }
+    }
+
+    private String forwardMessage(Long messageId, Long chatId, Long destinationChatId) {
+        String url = sendMessageUrl + "/" + chatId + "/" + onlineUsername + "/" + destinationChatId;
+        ResponseEntity<String> response = client.post().uri(url).bodyValue(messageId).retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
+        return response != null ? response.getBody() : pleaseTryAgain;
     }
 }
