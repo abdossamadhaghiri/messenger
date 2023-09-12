@@ -1,0 +1,11 @@
+# Default ignored files
+/sonarlint
+/shelf/
+/workspace.xml
+/dataSources.xml
+/sqldialects.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
