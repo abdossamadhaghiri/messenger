@@ -1,22 +1,26 @@
 package org.example.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
+import java.util.List;
 
 
 @Entity
 @ToString
 @NoArgsConstructor
-@AllArgsConstructor
-@Table(name = "table_user")
+@RequiredArgsConstructor
+@Table(name = "tttt")
 public class User {
 
     @Id
-    private @Getter String username;
+    private @NonNull @Getter String username;
+
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn
+    @ManyToMany
+    private @Getter List<Chat> chats;
 
 }
