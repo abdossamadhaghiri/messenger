@@ -295,149 +295,36 @@ class ServerControllerTest {
     }
 
     @Test
-    void testDeleteMessage_invalidUsername() {
-        long messageId = messageRepository.findAll().get(2).getId();
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "alireza";
-        String url = "http://localhost:" + port + "/messages/" + messageId + "/" + chatId + "/" + username;
-        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the username doesnt exist!", result.getResponseBody()));
-    }
-
-    @Test
-    void testDeleteMessage_chatDoesntExists() {
-        long messageId = messageRepository.findAll().get(2).getId();
-        long chatId = chatRepository.findAll().get(2).getId() + 1;
-        String username = "reza";
-        String url = "http://localhost:" + port + "/messages/" + messageId + "/" + chatId + "/" + username;
-        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the chat doesnt exist!", result.getResponseBody()));
-    }
-
-    @Test
-    void testDeleteMessage_chatDoesntInSendersChat() {
-        long messageId = messageRepository.findAll().get(2).getId();
-        long chatId = chatRepository.findAll().get(1).getId();
-        String username = "reza";
-        String url = "http://localhost:" + port + "/messages/" + messageId + "/" + chatId + "/" + username;
-        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the chat doesnt in sender's chats!", result.getResponseBody()));
-    }
-
-    @Test
     void testDeleteMessage_messageDoesntExists() {
         long messageId = messageRepository.findAll().get(2).getId() + 1;
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "reza";
-        String url = "http://localhost:" + port + "/messages/" + messageId + "/" + chatId + "/" + username;
+        String url = "http://localhost:" + port + "/messages/" + messageId;
         client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("the message doesnt exist!", result.getResponseBody()));
-    }
-
-    @Test
-    void testDeleteMessage_messageDoesntInChat() {
-        long messageId = messageRepository.findAll().get(0).getId();
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "reza";
-        String url = "http://localhost:" + port + "/messages/" + messageId + "/" + chatId + "/" + username;
-        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the message doesnt in this chat!", result.getResponseBody()));
-    }
-
-    @Test
-    void testDeleteMessage_messageDoesntYourMessage() {
-        long messageId = messageRepository.findAll().get(2).getId();
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "javad";
-        String url = "http://localhost:" + port + "/messages/" + messageId + "/" + chatId + "/" + username;
-        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the message doesnt your message!", result.getResponseBody()));
     }
 
     @Test
     void testDeleteMessage_ok() {
         Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "reza";
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
+        String url = "http://localhost:" + port + "/messages/" + message.getId();
         client.delete().uri(url).exchange().expectStatus().isOk();
         assertThat(messageRepository.findById((long) message.getId())).isEmpty();
-        assertThat(message).usingRecursiveComparison().isNotIn(chatRepository.findById(chatId).get().getMessages());
-    }
-
-    @Test
-    void testEditMessage_invalidUsername() {
-        Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "alireza";
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the username doesnt exist!", result.getResponseBody()));
-    }
-
-    @Test
-    void testEditMessage_chatDoesntExists() {
-        Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(2).getId() + 1;
-        String username = "reza";
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the chat doesnt exist!", result.getResponseBody()));
-    }
-
-    @Test
-    void testEditMessage_chatDoesntInSendersChat() {
-        Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(1).getId();
-        String username = "reza";
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the chat doesnt in sender's chats!", result.getResponseBody()));
+        assertThat(message).usingRecursiveComparison().isNotIn(chatRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
     void testEditMessage_messageDoesntExists() {
         Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "reza";
         Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1) + "/" + chatId + "/" + username;
+        String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1);
         client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("the message doesnt exist!", result.getResponseBody()));
     }
 
     @Test
-    void tesEditMessage_messageDoesntInChat() {
-        Message message = messageRepository.findAll().get(0);
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "reza";
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the message doesnt in this chat!", result.getResponseBody()));
-    }
-
-    @Test
-    void testEditMessage_messageDoesntYourMessage() {
-        Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "javad";
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the message doesnt your message!", result.getResponseBody()));
-    }
-
-    @Test
     void testEditMessage_ok() {
         Message message = messageRepository.findAll().get(2);
-        long chatId = chatRepository.findAll().get(2).getId();
-        String username = "reza";
         Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
-        String url = "http://localhost:" + port + "/messages/" + message.getId() + "/" + chatId + "/" + username;
+        String url = "http://localhost:" + port + "/messages/" + message.getId();
         client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isOk();
         assertEquals(newMessage.getText(), messageRepository.findById((long) message.getId()).get().getText());
     }

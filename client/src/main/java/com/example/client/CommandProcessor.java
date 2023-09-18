@@ -24,6 +24,7 @@ public class CommandProcessor {
     private @Setter String messagesUrl;
     private @Setter String invalidCommand;
     private @Setter String invalidChatId;
+    private @Setter String invalidMessageId;
     private @Setter String pleaseTryAgain;
 
     public void run() {
@@ -138,15 +139,15 @@ public class CommandProcessor {
             } else if (option.equals("2")) {
                 System.out.println("enter your message id:");
                 Long messageId = Long.valueOf(scanner.nextLine());
-                deleteMessage(messageId, chat);
+                System.out.println(deleteMessage(messageId, chat));
             } else if (option.equals("3")) {
                 System.out.println("enter your message id:");
                 Long messageId = Long.valueOf(scanner.nextLine());
-                editMessage(messageId, chat);
+                System.out.println(editMessage(messageId, chat));
             } else if (option.equals("4")) {
                 System.out.println("enter your message id:");
                 Long messageId = Long.valueOf(scanner.nextLine());
-                selectDestinationChatForForward(messageId, chat);
+                forward(messageId, chat);
             } else if (option.equals("5")) {
                 System.out.println("enter your message id:");
                 Long messageId = Long.valueOf(scanner.nextLine());
@@ -272,40 +273,41 @@ public class CommandProcessor {
         }
     }
 
-    private void deleteMessage(Long messageId, Chat chat) {
-        String url = messagesUrl + "/" + messageId + "/" + chat.getId() + "/" + onlineUser.getUsername();
+    private String deleteMessage(Long messageId, Chat chat) {
+        Message message = getMessage(messageId);
+        if (message == null || !message.getChatId().equals(chat.getId()) || !message.getSender().equals(onlineUser.getUsername())) {
+            return invalidMessageId;
+        }
+        String url = messagesUrl + "/" + messageId;
         ResponseEntity<String> response = client.delete().uri(url).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
-        if (response != null) {
-            System.out.println(response.getBody());
-        } else {
-            System.out.println(pleaseTryAgain);
+        if (response == null) {
+            return pleaseTryAgain;
         }
+        return response.getBody();
     }
 
-    private void editMessage(Long messageId, Chat chat) {
+    private String editMessage(Long messageId, Chat chat) {
+        Message message = getMessage(messageId);
+        if (message == null || !message.getChatId().equals(chat.getId()) || !message.getSender().equals(onlineUser.getUsername())) {
+            return invalidMessageId;
+        }
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
-        Message newMessage = getMessage(messageId);
-        if (newMessage == null) {
-            System.out.println("the message doesnt exist!");
-            return;
-        }
-        newMessage.setText(newText);
-        String url = messagesUrl + "/" + messageId + "/" + chat.getId() + "/" + onlineUser.getUsername();
-        ResponseEntity<String> response = client.put().uri(url).bodyValue(newMessage).retrieve()
+        message.setText(newText);
+        String url = messagesUrl + "/" + messageId;
+        ResponseEntity<String> response = client.put().uri(url).bodyValue(message).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
-        if (response != null) {
-            System.out.println(response.getBody());
-        } else {
-            System.out.println(pleaseTryAgain);
+        if (response == null) {
+            return pleaseTryAgain;
         }
+        return response.getBody();
     }
 
-    private void selectDestinationChatForForward(Long messageId, Chat chat) {
+    private void forward(Long messageId, Chat chat) {
         Message message = getMessage(messageId);
-        if (message == null) {
-            System.out.println("the message doesnt exist!");
+        if (message == null || !message.getChatId().equals(chat.getId())) {
+            System.out.println(invalidMessageId);
             return;
         }
         System.out.println("1. select chat\n2. enter a new username");
@@ -332,11 +334,8 @@ public class CommandProcessor {
 
     private String pinMessage(Long messageId, Chat chat) {
         Message pinnedMessage = getMessage(messageId);
-        if (pinnedMessage == null) {
-            return "the message doesnt exist!";
-        }
-        if (!pinnedMessage.getChatId().equals(chat.getId())) {
-            return "the message doesnt in this chat!";
+        if (pinnedMessage == null || !pinnedMessage.getChatId().equals(chat.getId())) {
+            return invalidMessageId;
         }
         chat.getPinMessages().add(pinnedMessage);
         String url = chatsUrl + "/" + chat.getId();
