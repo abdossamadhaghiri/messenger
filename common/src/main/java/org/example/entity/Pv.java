@@ -13,5 +13,9 @@ public class Pv extends Chat {
 
     private @Getter @Setter String second;
 
-
+    public Pv(Long id, String first, String second) {
+        this.setId(id);
+        this.first = first;
+        this.second = second;
+    }
 }

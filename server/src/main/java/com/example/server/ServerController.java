@@ -60,7 +60,7 @@ public class ServerController {
     }
 
     @PostMapping("/chat")
-    public ResponseEntity<String> newChat(@RequestBody Pv pv) {
+    public ResponseEntity<String> newPv(@RequestBody Pv pv) {
         if (!userRepository.existsById(pv.getFirst()) || !userRepository.existsById(pv.getSecond())) {
             return new ResponseEntity<>("username doesnt exist.", HttpStatus.BAD_REQUEST);
         } else if (getPvByUsernames(pv.getFirst(), pv.getSecond()) != null) {
