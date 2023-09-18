@@ -29,7 +29,7 @@ public abstract class Chat {
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn
     @OneToMany(cascade = CascadeType.ALL)
-    private @Getter List<Message> messages;
+    private @Getter @Setter List<Message> messages;
 
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn

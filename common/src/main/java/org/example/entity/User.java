@@ -11,8 +11,9 @@ import java.util.List;
 @Entity
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
 @RequiredArgsConstructor
-@Table(name = "tttt")
+@Table(name = "users")
 public class User {
 
     @Id

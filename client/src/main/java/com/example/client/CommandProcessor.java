@@ -226,11 +226,12 @@ public class CommandProcessor {
             System.out.println("enter your message id:");
             repliedMessageId = Long.parseLong(scanner.nextLine());
         }
-        return sendMessage(text, chat, repliedMessageId);
+        return sendMessage(text, chat, repliedMessageId, null);
     }
 
-    private String sendMessage(String text, Chat chat, Long repliedMessageId) {
+    private String sendMessage(String text, Chat chat, Long repliedMessageId, String forwardedFrom) {
         Message message = new Message(text, onlineUser.getUsername(), chat.getId(), repliedMessageId);
+        message.setForwardedFrom(forwardedFrom);
         String url = messagesUrl;
         ResponseEntity<String> response = client.post().uri(url).bodyValue(message).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
@@ -285,8 +286,14 @@ public class CommandProcessor {
     private void editMessage(Long messageId, Chat chat) {
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
+        Message newMessage = getMessage(messageId);
+        if (newMessage == null) {
+            System.out.println("the message doesnt exist!");
+            return;
+        }
+        newMessage.setText(newText);
         String url = messagesUrl + "/" + messageId + "/" + chat.getId() + "/" + onlineUser.getUsername();
-        ResponseEntity<String> response = client.put().uri(url).bodyValue(newText).retrieve()
+        ResponseEntity<String> response = client.put().uri(url).bodyValue(newMessage).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response != null) {
             System.out.println(response.getBody());
@@ -296,45 +303,39 @@ public class CommandProcessor {
     }
 
     private void selectDestinationChatForForward(Long messageId, Chat chat) {
+        Message message = getMessage(messageId);
+        if (message == null) {
+            System.out.println("the message doesnt exist!");
+            return;
+        }
         System.out.println("1. select chat\n2. enter a new username");
         String option = scanner.nextLine();
         if (option.equals("1")) {
             System.out.println("enter your chat id:");
             Long destinationChatId = Long.valueOf(scanner.nextLine());
             if (isOldChat(destinationChatId)) {
-                System.out.println(forwardMessage(messageId, chat, destinationChatId));
+                Chat destinationChat = getChat(destinationChatId);
+                System.out.println(sendMessage(message.getText(), destinationChat, 0L, message.getSender()));
             }
         } else if (option.equals("2")) {
             System.out.println("enter the username:");
             String username = scanner.nextLine();
             if (isNewChat(username)) {
                 Long destinationChatId = getChatId(username);
-                System.out.println(forwardMessage(messageId, chat, destinationChatId));
+                Chat destinationChat = getChat(destinationChatId);
+                System.out.println(sendMessage(message.getText(), destinationChat, 0L, message.getSender()));
             }
         } else {
             System.out.println(invalidCommand);
         }
     }
 
-    private String forwardMessage(Long messageId, Chat chat, Long destinationChatId) {
-        String url = messagesUrl + "/" + chat.getId() + "/" + onlineUser.getUsername() + "/" + destinationChatId;
-        ResponseEntity<String> response = client.post().uri(url).bodyValue(messageId).retrieve()
-                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
-        return response != null ? response.getBody() : pleaseTryAgain;
-    }
-
     private String pinMessage(Long messageId, Chat chat) {
-        String messageUrl = messagesUrl + "/" + messageId;
-        ResponseEntity<Message> messageResponseEntity = client.get().uri(messageUrl).retrieve()
-                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(Message.class).block();
-        if (messageResponseEntity == null) {
-            return pleaseTryAgain;
-        }
-        if (messageResponseEntity.getBody() == null) {
+        Message pinnedMessage = getMessage(messageId);
+        if (pinnedMessage == null) {
             return "the message doesnt exist!";
         }
-        Message pinnedMessage = messageResponseEntity.getBody();
-        if (chat.getMessages().stream().noneMatch(message -> message.getId() == messageId)) {
+        if (!pinnedMessage.getChatId().equals(chat.getId())) {
             return "the message doesnt in this chat!";
         }
         chat.getPinMessages().add(pinnedMessage);
@@ -377,4 +378,14 @@ public class CommandProcessor {
         return response.getBody();
     }
 
+    private Message getMessage(Long messageId) {
+        String url = messagesUrl + "/" + messageId;
+        ResponseEntity<Message> response = client.get().uri(url).retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(Message.class).block();
+        if (response == null) {
+            System.out.println(pleaseTryAgain);
+            return null;
+        }
+        return response.getBody();
+    }
 }
