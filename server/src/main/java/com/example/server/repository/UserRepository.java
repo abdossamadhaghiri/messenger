@@ -1,10 +1,10 @@
 package com.example.server.repository;
 
-import org.example.entity.User;
-import org.springframework.data.repository.ListCrudRepository;
+import com.example.server.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRepository extends ListCrudRepository<User, String> {
+public interface UserRepository extends JpaRepository<User, String> {
 
 }
