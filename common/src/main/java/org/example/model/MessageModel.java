@@ -1,11 +1,6 @@
 package org.example.model;
 
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.Getter;
-import lombok.NonNull;
+import lombok.*;
 
 @AllArgsConstructor
 @RequiredArgsConstructor
@@ -15,7 +10,7 @@ public class MessageModel {
 
     private @Getter Long id;
 
-    private @NonNull @Getter String text;
+    private @NonNull @Getter @Setter String text;
 
     private @NonNull @Getter String sender;
 

@@ -16,6 +16,7 @@ public class ApiAddresses {
         newGroupApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/groups";
         deleteMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
         editMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
+        getMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
 
     }
 
@@ -29,6 +30,6 @@ public class ApiAddresses {
     public String newGroupApiUrl;
     public String deleteMessageApiUrl;
     public String editMessageApiUrl;
-
+    public String getMessageApiUrl;
 
 }

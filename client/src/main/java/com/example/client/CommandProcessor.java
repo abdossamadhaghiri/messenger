@@ -153,7 +153,6 @@ public class CommandProcessor {
                 String text = scanner.nextLine();
                 System.out.println(sendMessage(text, chatId));
             } else if (option.equals("2")) {
-                flag = false;
                 System.out.println("enter your message id:");
                 Long messageId = Long.valueOf(scanner.nextLine());
                 System.out.println(deleteMessage(messageId,chatId));
@@ -162,7 +161,7 @@ public class CommandProcessor {
                 Long messageId = Long.valueOf(scanner.nextLine());
                 System.out.println(editMessage(messageId, chatId));
             } else if (option.equals("4")) {
-                break;
+                flag = false;
             } else {
                 System.out.println(Commands.INVALID_COMMAND);
             }
@@ -206,9 +205,9 @@ public class CommandProcessor {
     }
 
     private String sendMessage(String text, Long chatId) {
-        MessageModel message = new MessageModel(text, onlineUsername, chatId);
+        MessageModel messageModel = new MessageModel(text, onlineUsername, chatId);
         String url = apiAddresses.sendMessageApiUrl;
-        ResponseEntity<String> response = client.post().uri(url).bodyValue(message).retrieve().toEntity(String.class).block();
+        ResponseEntity<String> response = client.post().uri(url).bodyValue(messageModel).retrieve().toEntity(String.class).block();
         return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
     }
 
@@ -253,33 +252,44 @@ public class CommandProcessor {
         }
     }
 
-    private String deleteMessage(Long messageId, Chat chat) {
-        Message message = getMessage(messageId);
-        if (message == null || !message.getChatId().equals(chat.getId()) || !message.getSender().equals(onlineUser.getUsername())) {
-            return invalidMessageId;
+    private String deleteMessage(Long messageId, Long chatId) {
+        MessageModel messageModel = getMessage(messageId);
+        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUsername)) {
+            return Commands.INVALID_MESSAGE_ID;
         }
-        String url = messagesUrl + "/" + messageId;
+        String url = apiAddresses.deleteMessageApiUrl + "/" + messageId;
         ResponseEntity<String> response = client.delete().uri(url).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response == null) {
-            return pleaseTryAgain;
+            return Commands.PLEASE_TRY_AGAIN;
         }
         return response.getBody();
     }
 
-    private String editMessage(Long messageId, Chat chat) {
-        Message message = getMessage(messageId);
-        if (message == null || !message.getChatId().equals(chat.getId()) || !message.getSender().equals(onlineUser.getUsername())) {
-            return invalidMessageId;
+    private String editMessage(Long messageId, Long chatId) {
+        MessageModel messageModel = getMessage(messageId);
+        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUsername)) {
+            return Commands.INVALID_MESSAGE_ID;
         }
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
-        message.setText(newText);
-        String url = messagesUrl + "/" + messageId;
-        ResponseEntity<String> response = client.put().uri(url).bodyValue(message).retrieve()
+        messageModel.setText(newText);
+        String url = apiAddresses.editMessageApiUrl + "/" + messageId;
+        ResponseEntity<String> response = client.put().uri(url).bodyValue(messageModel).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response == null) {
-            return pleaseTryAgain;
+            return Commands.PLEASE_TRY_AGAIN;
+        }
+        return response.getBody();
+    }
+
+    private MessageModel getMessage(Long messageId) {
+        String url = apiAddresses.getMessageApiUrl + "/" + messageId;
+        ResponseEntity<MessageModel> response = client.get().uri(url).retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(MessageModel.class).block();
+        if (response == null) {
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
+            return null;
         }
         return response.getBody();
     }
