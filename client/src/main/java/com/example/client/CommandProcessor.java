@@ -234,7 +234,7 @@ public class CommandProcessor {
                         members.add(username);
                     }
                 } else {
-                    System.out.println(pleaseTryAgain);
+                    System.out.println(Commands.PLEASE_TRY_AGAIN);
                 }
             } else if (option.equals("2")) {
                 flag = false;
@@ -249,32 +249,31 @@ public class CommandProcessor {
         if (response != null) {
             System.out.println(response.getBody());
         } else {
-            System.out.println(pleaseTryAgain);
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
         }
     }
 
     private void deleteMessage(Long messageId, Long chatId) {
-        String url = deleteMessageUrl + "/" + messageId + "/" + chatId + "/" + onlineUsername;
+        String url = apiAddresses.deleteMessageApiUrl + "/" + messageId + "/" + chatId + "/" + onlineUsername;
         ResponseEntity<String> response = client.delete().uri(url).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response != null) {
             System.out.println(response.getBody());
         } else {
-            System.out.println(pleaseTryAgain);
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
         }
-
     }
 
     private void editMessage(Long messageId, Long chatId) {
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
-        String url = editMessageUrl + "/" + messageId + "/" + chatId + "/" + onlineUsername;
+        String url = apiAddresses.editMessageApiUrl + "/" + messageId + "/" + chatId + "/" + onlineUsername;
         ResponseEntity<String> response = client.put().uri(url).bodyValue(newText).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response != null) {
             System.out.println(response.getBody());
         } else {
-            System.out.println(pleaseTryAgain);
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
         }    }
 
 }

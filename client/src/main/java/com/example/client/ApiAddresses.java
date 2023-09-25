@@ -14,6 +14,9 @@ public class ApiAddresses {
         getChatIdApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/chatId/";
         sendMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
         newGroupApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/groups";
+        deleteMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
+        editMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
+
     }
 
     public String signUpApiUrl;
@@ -24,6 +27,8 @@ public class ApiAddresses {
     public String getChatIdApiUrl;
     public String sendMessageApiUrl;
     public String newGroupApiUrl;
+    public String deleteMessageApiUrl;
+    public String editMessageApiUrl;
 
 
 }

@@ -185,4 +185,40 @@ class ServerControllerTest {
         assertThat(group).usingRecursiveComparison().isIn(chatRepository.findAll());
     }
 
+    @Test
+    void testDeleteMessage_messageDoesntExists() {
+        long messageId = messageRepository.findAll().get(2).getId() + 1;
+        String url = "http://localhost:" + port + "/messages/" + messageId;
+        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                assertEquals("the message doesnt exist!", result.getResponseBody()));
+    }
+
+    @Test
+    void testDeleteMessage_ok() {
+        Message message = messageRepository.findAll().get(2);
+        String url = "http://localhost:" + port + "/messages/" + message.getId();
+        client.delete().uri(url).exchange().expectStatus().isOk();
+        assertThat(messageRepository.findById((long) message.getId())).isEmpty();
+        assertThat(message).usingRecursiveComparison().isNotIn(chatRepository.findById(message.getChatId()).get().getMessages());
+    }
+
+    @Test
+    void testEditMessage_messageDoesntExists() {
+        Message message = messageRepository.findAll().get(2);
+        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
+        String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1);
+        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                assertEquals("the message doesnt exist!", result.getResponseBody()));
+    }
+
+    @Test
+    void testEditMessage_ok() {
+        Message message = messageRepository.findAll().get(2);
+        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId(), message.getRepliedMessageId());
+        String url = "http://localhost:" + port + "/messages/" + message.getId();
+        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isOk();
+        assertEquals(newMessage.getText(), messageRepository.findById((long) message.getId()).get().getText());
+    }
+
+
 }
