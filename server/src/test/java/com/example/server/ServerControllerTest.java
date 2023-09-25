@@ -1,7 +1,10 @@
 package com.example.server;
 
+import com.example.server.entity.*;
 import com.example.server.repository.*;
-import org.example.entity.*;
+import org.example.model.GroupModel;
+import org.example.model.MessageModel;
+import org.example.model.PvModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,18 +108,18 @@ class ServerControllerTest {
     @Test
     void testNewMessage_invalidSender() {
         List<Chat> chats = chatRepository.findAll();
-        Message message = new Message(4, "hello javad!", "alireza", chats.get(1).getId());
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "alireza", chats.get(1).getId());
         String url = "http://localhost:" + port + "/messages";
-        client.post().uri(url).bodyValue(message).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("invalid message content!", result.getResponseBody()));
     }
 
     @Test
     void testNewMessage_chatDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
-        Message message = new Message(4, "hello javad!", "ali", chats.get(2).getId() + 1);
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId() + 1);
         String url = "http://localhost:" + port + "/messages";
-        client.post().uri(url).bodyValue(message).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("invalid message content!", result.getResponseBody()));
     }
 
@@ -124,58 +127,61 @@ class ServerControllerTest {
     void testNewMessage_ok() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
-        Message message = new Message(messages.get(2).getId() + 1, "hello javad!", "ali", chats.get(1).getId());
+        MessageModel messageModel = new MessageModel(((long) messages.get(2).getId()) + 1, "hello javad!", "ali", chats.get(1).getId());
         String url = "http://localhost:" + port + "/messages";
-        client.post().uri(url).bodyValue(message).exchange().expectStatus().isOk();
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
+        Message message = new Message( messages.get(2).getId() + 1, messageModel.getText(), messageModel.getSender(), messageModel.getChatId());
         assertThat(message).usingRecursiveComparison().isIn(messageRepository.findAll());
     }
 
     @Test
     void testNewPv_invalidFirstUsername() {
-        Chat pv = new Pv("alireza", "ali");
+        PvModel pvModel = new PvModel("alireza", "ali");
         String url = "http://localhost:" + port + "/chat";
-        client.post().uri(url).bodyValue(pv).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("username doesnt exist.", result.getResponseBody()));
     }
 
     @Test
     void testNewPv_invalidSecondUsername() {
-        Chat pv = new Pv("ali", "alireza");
+        PvModel pvModel = new PvModel("ali", "alireza");
         String url = "http://localhost:" + port + "/chat";
-        client.post().uri(url).bodyValue(pv).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("username doesnt exist.", result.getResponseBody()));
     }
 
     @Test
     void testNewPv_duplicateChat() {
-        Chat pv = new Pv("ali", "reza");
+        PvModel pvModel= new PvModel("ali", "reza");
         String url = "http://localhost:" + port + "/chat";
-        client.post().uri(url).bodyValue(pv).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("the chat already exists.", result.getResponseBody()));
     }
 
     @Test
     void testNewPv_ok() {
-        Chat pv = new Pv(chatRepository.findAll().get(2).getId() + 1, "ali", "amir");
+        PvModel pvModel = new PvModel(chatRepository.findAll().get(2).getId() + 1, "ali", "amir");
         String url = "http://localhost:" + port + "/chat";
-        client.post().uri(url).bodyValue(pv).exchange().expectStatus().isOk();
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
+        Pv pv = new Pv(pvModel.getId(), pvModel.getFirst(), pvModel.getSecond());
         assertThat(pv).usingRecursiveComparison().isIn(chatRepository.findAll());
     }
 
     @Test
     void testNewGroup_invalidContent() {
-        Group group = new Group("ali", new ArrayList<>(List.of("ali", "reza", "alireza")), "groupName");
+        GroupModel groupModel = new GroupModel("ali", new ArrayList<>(List.of("ali", "reza", "alireza")), "groupName");
         String url = "http://localhost:" + port + "/groups";
-        client.post().uri(url).bodyValue(group).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals("invalid group content!", result.getResponseBody()));
     }
 
     @Test
     void testNewGroup_ok() {
-        Group group = new Group(chatRepository.findAll().get(2).getId() + 1, "ali",
+        GroupModel groupModel = new GroupModel(chatRepository.findAll().get(2).getId() + 1, "ali",
                 new ArrayList<>(List.of("ali", "reza", "javad")), "groupName");
         String url = "http://localhost:" + port + "/groups";
-        client.post().uri(url).bodyValue(group).exchange().expectStatus().isOk();
+        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
+        Group group = new Group(groupModel.getId(), groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
         assertThat(group).usingRecursiveComparison().isIn(chatRepository.findAll());
     }
 

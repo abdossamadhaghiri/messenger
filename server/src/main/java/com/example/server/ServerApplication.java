@@ -1,6 +1,6 @@
 package com.example.server;
 
-import org.example.entity.User;
+import com.example.server.entity.User;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;

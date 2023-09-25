@@ -1,11 +1,9 @@
 package com.example.client;
 
-import lombok.Setter;
-import org.example.entity.Chat;
-import org.example.entity.Group;
-import org.example.entity.Message;
-import org.example.entity.Pv;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.example.model.ChatModel;
+import org.example.model.GroupModel;
+import org.example.model.MessageModel;
+import org.example.model.PvModel;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
@@ -18,88 +16,89 @@ import java.util.List;
 import java.util.Scanner;
 
 @Configuration
-@ConfigurationProperties(prefix = "const")
 public class CommandProcessor {
+
+    public CommandProcessor(ApiAddresses apiAddresses) {
+        this.apiAddresses = apiAddresses;
+    }
+
+    private final ApiAddresses apiAddresses;
     private WebClient client;
     private String onlineUsername;
     private Scanner scanner;
-
-    private @Setter String signUpUrl;
-    private @Setter String signInUrl;
-    private @Setter String getChatsUrl;
-    private @Setter String getMessagesInOldChatUrl;
-    private @Setter String enterNewChatUrl;
-    private @Setter String getChatIdUrl;
-    private @Setter String sendMessageUrl;
-    private @Setter String newGroupUrl;
-    private @Setter String invalidCommand;
-    private @Setter String pleaseTryAgain;
 
     public void run() {
         client = WebClient.create();
         scanner = new Scanner(System.in);
 
-        while (true) {
+        boolean flag = true;
+        while (flag) {
             System.out.println("1. sign up\n2. sign in\n3. quit");
             String option = scanner.nextLine();
-            if (option.equals("1")) {
-                System.out.println("enter your username: ");
-                String username = scanner.nextLine();
-                System.out.println(signUp(username));
-            } else if (option.equals("2")) {
-                System.out.println("enter your username: ");
-                String username = scanner.nextLine();
-                if (signIn(username)) {
-                    continueWithOnlineUser();
+            switch (option) {
+                case "1" -> {
+                    System.out.println("enter your username: ");
+                    String username = scanner.nextLine();
+                    System.out.println(signUp(username));
                 }
-            } else if (option.equals("3")) {
-                break;
-            } else {
-                System.out.println(invalidCommand);
+                case "2" -> {
+                    System.out.println("enter your username: ");
+                    String username = scanner.nextLine();
+                    if (signIn(username)) {
+                        continueWithOnlineUser();
+                    }
+                }
+                case "3" -> flag = false;
+                default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
     }
 
     private void continueWithOnlineUser() {
-        while (true) {
-            List<Chat> myChats = getChats();
+        boolean flag = true;
+        while (flag) {
+            List<ChatModel> myChats = getChats();
             showChatList(myChats);
             System.out.println("1. select chat\n2. enter a username to start chat\n3. create a group\n4. logout");
             String option = scanner.nextLine();
-            if (option.equals("1")) {
-                System.out.println("enter your chat id:");
-                Long chatId = Long.valueOf(scanner.nextLine());
-                if (canEnterOldChat(chatId)) {
-                    chat(chatId);
+            switch (option) {
+                case "1" -> {
+                    System.out.println("enter your chat id:");
+                    Long chatId = Long.valueOf(scanner.nextLine());
+                    if (canEnterOldChat(chatId)) {
+                        chat(chatId);
+                    } else {
+                        System.out.println("invalid id!");
+                    }
                 }
-            } else if (option.equals("2")) {
-                System.out.println("enter your username:");
-                String username = scanner.nextLine();
-                if (canStartNewChat(username)) {
-                    Long chatId = getChatId(username);
-                    chat(chatId);
+                case "2" -> {
+                    System.out.println("enter your username:");
+                    String username = scanner.nextLine();
+                    if (canStartNewChat(username)) {
+                        Long newChatId = getChatId(username);
+                        chat(newChatId);
+                    } else {
+                        System.out.println("the username doesnt exist!");
+                    }
                 }
-            } else if (option.equals("3")) {
-                createGroup();
-            } else if (option.equals("4")) {
-                break;
-            } else {
-                System.out.println(invalidCommand);
+                case "3" -> createGroup();
+                case "4" -> flag = false;
+                default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
     }
 
     private String signUp(String username) {
-        String url = signUpUrl;
+        String url = apiAddresses.signUpApiUrl;
 
         ResponseEntity<String> response = client.post().uri(url).bodyValue(username).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
 
-        return response != null ? response.getBody() : pleaseTryAgain;
+        return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
     }
 
     private boolean signIn(String username) {
-        String url = signInUrl + username;
+        String url = apiAddresses.signInApiUrl + username;
 
         ResponseEntity<String> response = client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
@@ -111,30 +110,30 @@ public class CommandProcessor {
                 return true;
             }
         } else {
-            System.out.println(pleaseTryAgain);
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
         }
         return false;
     }
 
-    private List<Chat> getChats() {
-        String url = getChatsUrl + onlineUsername;
-        ResponseEntity<List<Chat>> response = client.get().uri(url).retrieve().toEntity(new ParameterizedTypeReference<List<Chat>>() {
+    private List<ChatModel> getChats() {
+        String url = apiAddresses.getChatsApiUrl + onlineUsername;
+        ResponseEntity<List<ChatModel>> response = client.get().uri(url).retrieve().toEntity(new ParameterizedTypeReference<List<ChatModel>>() {
         }).block();
 
         return response != null ? response.getBody() : new ArrayList<>();
     }
 
-    private void showChatList(List<Chat> chats) {
-        for (Chat chat : chats) {
-            if (chat instanceof Pv pv) {
+    private void showChatList(List<ChatModel> chats) {
+        for (ChatModel chat : chats) {
+            if (chat instanceof PvModel pv) {
                 System.out.println("- " + getPeer(pv) + ": " + chat.getId());
             } else {
-                System.out.println("- " + ((Group) chat).getName() + "(G): " + chat.getId());
+                System.out.println("- " + ((GroupModel) chat).getName() + "(G): " + chat.getId());
             }
         }
     }
 
-    private String getPeer(Pv pv) {
+    private String getPeer(PvModel pv) {
         if (pv.getFirst().equals(onlineUsername)) {
             return pv.getSecond();
         }
@@ -142,7 +141,8 @@ public class CommandProcessor {
     }
 
     private void chat(Long chatId) {
-        while (true) {
+        boolean flag = true;
+        while (flag) {
             getMessagesInOldChat(chatId).getBody().forEach(message ->
                     System.err.println(recognizeSender(message.getSender()) + ": " + message.getText()));
 
@@ -153,52 +153,36 @@ public class CommandProcessor {
                 String text = scanner.nextLine();
                 System.out.println(sendMessage(text, chatId));
             } else if (option.equals("2")) {
-                break;
+                flag = false;
             } else {
-                System.out.println(invalidCommand);
+                System.out.println(Commands.INVALID_COMMAND);
             }
         }
     }
 
     private boolean canEnterOldChat(Long chatId) {
-        ResponseEntity<List<Message>> response = getMessagesInOldChat(chatId);
-        if (response != null) {
-            if (response.getStatusCode().equals(HttpStatus.OK)) {
-                return true;
-            }
-            System.out.println("invalid id!");
-        } else {
-            System.out.println(pleaseTryAgain);
-        }
-        return false;
+        ResponseEntity<List<MessageModel>> response = getMessagesInOldChat(chatId);
+        return response != null && response.getStatusCode().equals(HttpStatus.OK);
     }
 
-    private ResponseEntity<List<Message>> getMessagesInOldChat(Long chatId) {
-        String url = getMessagesInOldChatUrl + onlineUsername + "/" + chatId;
+    private ResponseEntity<List<MessageModel>> getMessagesInOldChat(Long chatId) {
+        String url = apiAddresses.getMessagesInOldChatApiUrl + onlineUsername + "/" + chatId;
         return client.get().uri(url).retrieve()
-                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(new ParameterizedTypeReference<List<Message>>() {
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(new ParameterizedTypeReference<List<MessageModel>>() {
                 }).block();
     }
 
     private boolean canStartNewChat(String username) {
-        String url = enterNewChatUrl;
-        Pv pv = new Pv(onlineUsername, username);
+        String url = apiAddresses.enterNewChatApiUrl;
+        PvModel pv = new PvModel(onlineUsername, username);
         ResponseEntity<String> response = client.post().uri(url).bodyValue(pv).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
 
-        if (response != null) {
-            if (response.getStatusCode().equals(HttpStatus.OK)) {
-                return true;
-            }
-            System.out.println(response.getBody());
-        } else {
-            System.out.println(pleaseTryAgain);
-        }
-        return false;
+        return response != null && response.getStatusCode().equals(HttpStatus.OK);
     }
 
     private Long getChatId(String username) {
-        String url = getChatIdUrl + onlineUsername + "/" + username;
+        String url = apiAddresses.getChatIdApiUrl + onlineUsername + "/" + username;
         ResponseEntity<Long> response = client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(Long.class).block();
 
@@ -213,23 +197,24 @@ public class CommandProcessor {
     }
 
     private String sendMessage(String text, Long chatId) {
-        Message message = new Message(text, onlineUsername, chatId);
-        String url = sendMessageUrl;
+        MessageModel message = new MessageModel(text, onlineUsername, chatId);
+        String url = apiAddresses.sendMessageApiUrl;
         ResponseEntity<String> response = client.post().uri(url).bodyValue(message).retrieve().toEntity(String.class).block();
-        return response != null ? response.getBody() : pleaseTryAgain;
+        return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
     }
 
     private void createGroup() {
         System.out.println("enter name of your group:");
         String name = scanner.nextLine();
         List<String> members = new ArrayList<>();
-        while (true) {
+        boolean flag = true;
+        while (flag) {
             System.out.println("1. add member\n2. create");
             String option = scanner.nextLine();
             if (option.equals("1")) {
                 System.out.println("enter the username:");
                 String username = scanner.nextLine();
-                String url = signInUrl + username;
+                String url = apiAddresses.signInApiUrl + username;
                 ResponseEntity<String> response = client.get().uri(url).retrieve()
                         .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
                 if (response.getStatusCode().equals(HttpStatus.BAD_REQUEST)) {
@@ -239,14 +224,14 @@ public class CommandProcessor {
                     members.add(username);
                 }
             } else if (option.equals("2")) {
-                break;
+                flag = false;
             } else {
-                System.out.println(invalidCommand);
+                System.out.println(Commands.INVALID_COMMAND);
             }
         }
         members.add(onlineUsername);
-        String url = newGroupUrl;
-        Group group = new Group(onlineUsername, members, name);
+        String url = apiAddresses.newGroupApiUrl;
+        GroupModel group = new GroupModel(onlineUsername, members, name);
         ResponseEntity<String> response = client.post().uri(url).bodyValue(group).retrieve().toEntity(String.class).block();
         System.out.println(response.getBody());
 

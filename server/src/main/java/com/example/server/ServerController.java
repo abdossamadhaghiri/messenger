@@ -1,13 +1,25 @@
 package com.example.server;
 
+import com.example.server.entity.Pv;
+import com.example.server.entity.User;
+import com.example.server.entity.Group;
+import com.example.server.entity.Message;
+import com.example.server.entity.Chat;
 import com.example.server.repository.ChatRepository;
 import com.example.server.repository.MessageRepository;
 import lombok.AllArgsConstructor;
-import org.example.entity.*;
 import com.example.server.repository.UserRepository;
+import org.example.model.ChatModel;
+import org.example.model.GroupModel;
+import org.example.model.MessageModel;
+import org.example.model.PvModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,34 +50,37 @@ public class ServerController {
     }
 
     @GetMapping("/chats/{username}")
-    public ResponseEntity<List<Chat>> getChats(@PathVariable String username) {
+    public ResponseEntity<List<ChatModel>> getChats(@PathVariable String username) {
         if (!userRepository.existsById(username)) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
         }
-        List<Chat> chats = new ArrayList<>();
+        List<ChatModel> chatModels = new ArrayList<>();
         for (Chat chat : chatRepository.findAll()) {
             if (isInChats(username, chat)) {
-                chats.add(chat);
+                chatModels.add(chat.createChatModel());
             }
         }
-        return new ResponseEntity<>(chats, HttpStatus.OK);
+        return new ResponseEntity<>(chatModels, HttpStatus.OK);
     }
 
     @GetMapping("/messages/{username}/{chatId}")
-    public ResponseEntity<List<Message>> getMessagesInOldChat(@PathVariable String username, @PathVariable Long chatId) {
+    public ResponseEntity<List<MessageModel>> getMessagesInOldChat(@PathVariable String username, @PathVariable Long chatId) {
         if (!userRepository.existsById(username) || chatRepository.findById(chatId).isEmpty() || !isInChats(username, chatRepository.findById(chatId).get())) {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(messageRepository.findMessagesByChatId(chatId), HttpStatus.OK);
+        List<MessageModel> messageModels = new ArrayList<>();
+        messageRepository.findMessagesByChatId(chatId).forEach(message -> messageModels.add(message.createMessageModel()));
+        return new ResponseEntity<>(messageModels, HttpStatus.OK);
     }
 
     @PostMapping("/chat")
-    public ResponseEntity<String> newPv(@RequestBody Pv pv) {
-        if (!userRepository.existsById(pv.getFirst()) || !userRepository.existsById(pv.getSecond())) {
+    public ResponseEntity<String> newPv(@RequestBody PvModel pvModel) {
+        if (!userRepository.existsById(pvModel.getFirst()) || !userRepository.existsById(pvModel.getSecond())) {
             return new ResponseEntity<>("username doesnt exist.", HttpStatus.BAD_REQUEST);
-        } else if (getPvByUsernames(pv.getFirst(), pv.getSecond()) != null) {
+        } else if (getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
             return new ResponseEntity<>("the chat already exists.", HttpStatus.BAD_REQUEST);
         } else {
+            Pv pv = new Pv(pvModel.getFirst(), pvModel.getSecond());
             chatRepository.save(pv);
             return new ResponseEntity<>("start your chat.", HttpStatus.OK);
         }
@@ -80,11 +95,10 @@ public class ServerController {
 
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
         for (Chat chat : chatRepository.findAll()) {
-            if (chat instanceof Pv pv) {
-                if ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
-                        (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername))) {
+            if (chat instanceof Pv pv && ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
+                        (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
                     return pv;
-                }
+
             }
         }
         return null;
@@ -100,19 +114,21 @@ public class ServerController {
     }
 
     @PostMapping("/messages")
-    public ResponseEntity<String> newMessage(@RequestBody Message newMessage) {
-        if (!userRepository.existsById(newMessage.getSender()) || !chatRepository.existsById(newMessage.getChatId())) {
+    public ResponseEntity<String> newMessage(@RequestBody MessageModel messageModel) {
+        if (!userRepository.existsById(messageModel.getSender()) || !chatRepository.existsById(messageModel.getChatId())) {
             return new ResponseEntity<>("invalid message content!", HttpStatus.BAD_REQUEST);
         }
-        messageRepository.save(newMessage);
+        Message message = new Message(messageModel.getText(), messageModel.getSender(), messageModel.getChatId());
+        messageRepository.save(message);
         return new ResponseEntity<>("sent!", HttpStatus.OK);
     }
 
     @PostMapping("/groups")
-    public ResponseEntity<String> newGroup(@RequestBody Group group) {
-        if (group.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
+    public ResponseEntity<String> newGroup(@RequestBody GroupModel groupModel) {
+        if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
             return new ResponseEntity<>("invalid group content!", HttpStatus.BAD_REQUEST);
         }
+        Group group = new Group(groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
         chatRepository.save(group);
         return new ResponseEntity<>("the group successfully created!", HttpStatus.OK);
     }
