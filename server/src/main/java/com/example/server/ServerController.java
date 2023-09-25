@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,11 +98,10 @@ public class ServerController {
 
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
         for (Chat chat : chatRepository.findAll()) {
-            if (chat instanceof Pv pv) {
-                if ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
-                        (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername))) {
+            if (chat instanceof Pv pv && ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
+                        (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
                     return pv;
-                }
+
             }
         }
         return null;
