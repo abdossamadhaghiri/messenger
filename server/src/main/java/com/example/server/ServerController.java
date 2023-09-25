@@ -147,23 +147,12 @@ public class ServerController {
     }
 
     @PutMapping("/messages/{messageId}")
-    public ResponseEntity<String> editMessage(@PathVariable Long messageId, @RequestBody Message newMessage) {
+    public ResponseEntity<String> editMessage(@PathVariable Long messageId, @RequestBody MessageModel messageModel) {
         Optional<Message> message = messageRepository.findById(messageId);
-        Optional<Chat> chat = chatRepository.findById(chatId);
-        Optional<User> user = userRepository.findById(username);
-        if (user.isEmpty()) {
-            return new ResponseEntity<>("the username doesnt exist!", HttpStatus.BAD_REQUEST);
-        }
-        if (chat.isEmpty()) {
-            return new ResponseEntity<>("the chat doesnt exist!", HttpStatus.BAD_REQUEST);
-        }
-        if (!isInChats(username, chat.get())) {
-            return new ResponseEntity<>("the chat doesnt in sender's chats!", HttpStatus.BAD_REQUEST);
-        }
         if (message.isEmpty()) {
             return new ResponseEntity<>("the message doesnt exist!", HttpStatus.BAD_REQUEST);
         }
-        message.get().setText(newMessage.getText());
+        message.get().setText(messageModel.getText());
         messageRepository.save(message.get());
         return new ResponseEntity<>("the message edited!", HttpStatus.OK);
     }
@@ -173,9 +162,5 @@ public class ServerController {
         Optional<Message> message = messageRepository.findById(messageId);
         return message.map(value -> new ResponseEntity<>(value, HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
     }
-
-}
-
-
 
 }

@@ -20,7 +20,7 @@ public class Message {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
 
     private @NonNull String text;
 
@@ -29,7 +29,7 @@ public class Message {
     private @NonNull Long chatId;
 
     public MessageModel createMessageModel() {
-        return new MessageModel(this.text, this.sender, this.chatId);
+        return new MessageModel(((long) this.id), this.text, this.sender, this.chatId);
     }
 
 }
