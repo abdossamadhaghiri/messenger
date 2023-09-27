@@ -79,7 +79,7 @@ class ServerControllerTest {
         String URL = "http://localhost:" + port + "/signUp";
         String newUsername = "amin";
         client.post().uri(URL).bodyValue(newUsername).exchange().expectStatus().isOk();
-        assertThat(user).usingRecursiveComparison().isIn(userRepository.findAll());
+        assertThat(user).isIn(userRepository.findAll());
     }
 
     @Test
@@ -131,7 +131,7 @@ class ServerControllerTest {
         String url = "http://localhost:" + port + "/messages";
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = new Message( messages.get(2).getId() + 1, messageModel.getText(), messageModel.getSender(), messageModel.getChatId());
-        assertThat(message).usingRecursiveComparison().isIn(messageRepository.findAll());
+        assertThat(message).isIn(messageRepository.findAll());
     }
 
     @Test
@@ -164,7 +164,7 @@ class ServerControllerTest {
         String url = "http://localhost:" + port + "/chat";
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
         Pv pv = new Pv(pvModel.getId(), pvModel.getFirst(), pvModel.getSecond());
-        assertThat(pv).usingRecursiveComparison().isIn(chatRepository.findAll());
+        assertThat(pv).isIn(chatRepository.findAll());
     }
 
     @Test
@@ -182,7 +182,7 @@ class ServerControllerTest {
         String url = "http://localhost:" + port + "/groups";
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
         Group group = new Group(groupModel.getId(), groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
-        assertThat(group).usingRecursiveComparison().isIn(chatRepository.findAll());
+        assertThat(group).isIn(chatRepository.findAll());
     }
 
     @Test
@@ -231,8 +231,8 @@ class ServerControllerTest {
         long lastMessageId = messageRepository.findAll().get(2).getId();
         MessageModel expected = messageRepository.findById(lastMessageId).get().createMessageModel();
         String url = "http://localhost:" + port + "/messages/" + lastMessageId;
-        client.get().uri(url).exchange().expectStatus().isOk().expectBody(Message.class).consumeWith(result ->
-                assertThat(result.getResponseBody()).usingRecursiveComparison().isEqualTo(expected));
+        client.get().uri(url).exchange().expectStatus().isOk().expectBody(MessageModel.class).consumeWith(result ->
+                assertEquals(result.getResponseBody(), expected));
     }
 
 
