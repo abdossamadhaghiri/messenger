@@ -6,6 +6,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.model.UserModel;
 
 
 @Entity
@@ -17,5 +18,10 @@ public class User {
 
     @Id
     private String username;
+    private String token;
+
+    public UserModel createUserModel() {
+        return new UserModel(this.username, this.token);
+    }
 
 }

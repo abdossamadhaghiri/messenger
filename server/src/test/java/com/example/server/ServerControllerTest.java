@@ -1,7 +1,13 @@
 package com.example.server;
 
-import com.example.server.entity.*;
-import com.example.server.repository.*;
+import com.example.server.entity.Message;
+import com.example.server.entity.Chat;
+import com.example.server.entity.Pv;
+import com.example.server.entity.Group;
+import com.example.server.entity.User;
+import com.example.server.repository.MessageRepository;
+import com.example.server.repository.ChatRepository;
+import com.example.server.repository.UserRepository;
 import org.example.model.GroupModel;
 import org.example.model.MessageModel;
 import org.example.model.PvModel;
@@ -10,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.util.ArrayList;
@@ -17,6 +24,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ServerControllerTest {
@@ -66,25 +74,24 @@ class ServerControllerTest {
         Chat rezaJavadChat = chats.get(2);
         chatRepository.saveAll(List.of(aliRezaChat, aliJavadChat, rezaJavadChat));
 
-        User ali = new User("ali");
-        User reza = new User("reza");
-        User javad = new User("javad");
-        User amir = new User("amir");
+        User ali = new User("ali", ServerController.generateToken());
+        User reza = new User("reza", ServerController.generateToken());
+        User javad = new User("javad", ServerController.generateToken());
+        User amir = new User("amir", ServerController.generateToken());
         userRepository.saveAll(List.of(ali, reza, javad, amir));
     }
 
     @Test
     void testSignUp_newUsername() {
-        User user = new User("amin");
         String URL = "http://localhost:" + port + "/signUp";
         String newUsername = "amin";
         client.post().uri(URL).bodyValue(newUsername).exchange().expectStatus().isOk();
-        assertThat(user).isIn(userRepository.findAll());
+        assertTrue(userRepository.existsById(newUsername));
     }
 
     @Test
     void testSignUp_duplicateUsername() {
-        userRepository.save(new User("amin"));
+        userRepository.save(new User("amin", ServerController.generateToken()));
         String URL = "http://localhost:" + port + "/signUp";
         String duplicateUsername = "amin";
         client.post().uri(URL).bodyValue(duplicateUsername).exchange().expectStatus().isBadRequest();
@@ -99,7 +106,7 @@ class ServerControllerTest {
 
     @Test
     void testSignIn_duplicateUsername() {
-        userRepository.save(new User("alireza"));
+        userRepository.save(new User("alireza", ServerController.generateToken()));
         String duplicateUsername = "alireza";
         String URL = "http://localhost:" + port + "/signIn/" + duplicateUsername;
         client.get().uri(URL).exchange().expectStatus().isOk();
@@ -187,9 +194,9 @@ class ServerControllerTest {
 
     @Test
     void testDeleteMessage_messageDoesntExists() {
-        long messageId = messageRepository.findAll().get(2).getId() + 1;
-        String url = "http://localhost:" + port + "/messages/" + messageId;
-        client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        Message message = messageRepository.findAll().get(2);
+        String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1);
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, userRepository.findById(message.getSender()).get().getToken()).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
@@ -197,7 +204,7 @@ class ServerControllerTest {
     void testDeleteMessage_ok() {
         Message message = messageRepository.findAll().get(2);
         String url = "http://localhost:" + port + "/messages/" + message.getId();
-        client.delete().uri(url).exchange().expectStatus().isOk();
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, userRepository.findById(message.getSender()).get().getToken()).exchange().expectStatus().isOk();
         assertThat(messageRepository.findById((long) message.getId())).isEmpty();
     }
 
@@ -206,7 +213,8 @@ class ServerControllerTest {
         Message message = messageRepository.findAll().get(2);
         Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
         String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1);
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+        client.put().uri(url).header(HttpHeaders.AUTHORIZATION, userRepository.findById(message.getSender()).get().getToken())
+                .bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
@@ -215,23 +223,25 @@ class ServerControllerTest {
         Message message = messageRepository.findAll().get(2);
         Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
         String url = "http://localhost:" + port + "/messages/" + message.getId();
-        client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isOk();
-        assertEquals(newMessage.getText(), messageRepository.findById((long) message.getId()).get().getText());
+        client.put().uri(url).header(HttpHeaders.AUTHORIZATION, userRepository.findById(message.getSender()).get().getToken())
+                .bodyValue(newMessage).exchange().expectStatus().isOk();
+        assertEquals(newMessage.getText(), messageRepository.findById(message.getId()).get().getText());
     }
 
     @Test
     void testGetMessage_invalidId() {
-        long lastMessageId = messageRepository.findAll().get(2).getId();
-        String url = "http://localhost:" + port + "/messages/" + (lastMessageId + 1);
-        client.get().uri(url).exchange().expectStatus().isBadRequest();
+        Message message = messageRepository.findAll().get(2);
+        String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1);
+        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, userRepository.findById(message.getSender()).get().getToken()).exchange().expectStatus().isBadRequest();
     }
 
     @Test
     void testGetMessage_ok() {
-        long lastMessageId = messageRepository.findAll().get(2).getId();
-        MessageModel expected = messageRepository.findById(lastMessageId).get().createMessageModel();
-        String url = "http://localhost:" + port + "/messages/" + lastMessageId;
-        client.get().uri(url).exchange().expectStatus().isOk().expectBody(MessageModel.class).consumeWith(result ->
+        Message message = messageRepository.findAll().get(2);
+        MessageModel expected = message.createMessageModel();
+        String url = "http://localhost:" + port + "/messages/" + message.getId();
+        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, userRepository.findById(message.getSender()).get().getToken())
+                .exchange().expectStatus().isOk().expectBody(MessageModel.class).consumeWith(result ->
                 assertEquals(result.getResponseBody(), expected));
     }
 
