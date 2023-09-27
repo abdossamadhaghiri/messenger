@@ -6,10 +6,11 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
 public class PvModel extends ChatModel {
 
-    private @Getter String first;
-    private @Getter String second;
+    private String first;
+    private String second;
 
     public PvModel(Long id, String first, String second) {
         this.setId(id);

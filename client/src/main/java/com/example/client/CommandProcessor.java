@@ -89,7 +89,7 @@ public class CommandProcessor {
     }
 
     private String signUp(String username) {
-        String url = apiAddresses.signUpApiUrl;
+        String url = apiAddresses.getSignUpApiUrl();
 
         ResponseEntity<String> response = client.post().uri(url).bodyValue(username).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
@@ -98,7 +98,7 @@ public class CommandProcessor {
     }
 
     private boolean signIn(String username) {
-        String url = apiAddresses.signInApiUrl + username;
+        String url = apiAddresses.getSignInApiUrl() + username;
 
         ResponseEntity<String> response = client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
@@ -116,7 +116,7 @@ public class CommandProcessor {
     }
 
     private List<ChatModel> getChats() {
-        String url = apiAddresses.getChatsApiUrl + onlineUsername;
+        String url = apiAddresses.getGetChatsApiUrl() + onlineUsername;
         ResponseEntity<List<ChatModel>> response = client.get().uri(url).retrieve().toEntity(new ParameterizedTypeReference<List<ChatModel>>() {
         }).block();
 
@@ -148,22 +148,24 @@ public class CommandProcessor {
 
             System.out.println("1. send message\n2. delete message\n3. edit message\n4. back");
             String option = scanner.nextLine();
-            if (option.equals("1")) {
-                System.out.println("write your message:");
-                String text = scanner.nextLine();
-                System.out.println(sendMessage(text, chatId));
-            } else if (option.equals("2")) {
-                System.out.println("enter your message id:");
-                Long messageId = Long.valueOf(scanner.nextLine());
-                System.out.println(deleteMessage(messageId,chatId));
-            } else if (option.equals("3")) {
-                System.out.println("enter your message id:");
-                Long messageId = Long.valueOf(scanner.nextLine());
-                System.out.println(editMessage(messageId, chatId));
-            } else if (option.equals("4")) {
-                flag = false;
-            } else {
-                System.out.println(Commands.INVALID_COMMAND);
+            switch (option) {
+                case "1" -> {
+                    System.out.println("write your message:");
+                    String text = scanner.nextLine();
+                    System.out.println(sendMessage(text, chatId));
+                }
+                case "2" -> {
+                    System.out.println("enter your message id:");
+                    Long messageId = Long.valueOf(scanner.nextLine());
+                    System.out.println(deleteMessage(messageId, chatId));
+                }
+                case "3" -> {
+                    System.out.println("enter your message id:");
+                    Long messageId = Long.valueOf(scanner.nextLine());
+                    System.out.println(editMessage(messageId, chatId));
+                }
+                case "4" -> flag = false;
+                default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
     }
@@ -174,14 +176,14 @@ public class CommandProcessor {
     }
 
     private ResponseEntity<List<MessageModel>> getMessagesInOldChat(Long chatId) {
-        String url = apiAddresses.getMessagesInOldChatApiUrl + onlineUsername + "/" + chatId;
+        String url = apiAddresses.getGetMessagesInOldChatApiUrl() + onlineUsername + "/" + chatId;
         return client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(new ParameterizedTypeReference<List<MessageModel>>() {
                 }).block();
     }
 
     private boolean canStartNewChat(String username) {
-        String url = apiAddresses.enterNewChatApiUrl;
+        String url = apiAddresses.getEnterNewChatApiUrl();
         PvModel pv = new PvModel(onlineUsername, username);
         ResponseEntity<String> response = client.post().uri(url).bodyValue(pv).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
@@ -190,7 +192,7 @@ public class CommandProcessor {
     }
 
     private Long getChatId(String username) {
-        String url = apiAddresses.getChatIdApiUrl + onlineUsername + "/" + username;
+        String url = apiAddresses.getGetChatIdApiUrl() + onlineUsername + "/" + username;
         ResponseEntity<Long> response = client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(Long.class).block();
 
@@ -206,7 +208,7 @@ public class CommandProcessor {
 
     private String sendMessage(String text, Long chatId) {
         MessageModel messageModel = new MessageModel(text, onlineUsername, chatId);
-        String url = apiAddresses.sendMessageApiUrl;
+        String url = apiAddresses.getSendMessageApiUrl();
         ResponseEntity<String> response = client.post().uri(url).bodyValue(messageModel).retrieve().toEntity(String.class).block();
         return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
     }
@@ -222,7 +224,7 @@ public class CommandProcessor {
             if (option.equals("1")) {
                 System.out.println("enter the username:");
                 String username = scanner.nextLine();
-                String url = apiAddresses.signInApiUrl + username;
+                String url = apiAddresses.getSignInApiUrl() + username;
                 ResponseEntity<String> response = client.get().uri(url).retrieve()
                         .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
                 if (response != null) {
@@ -242,7 +244,7 @@ public class CommandProcessor {
             }
         }
         members.add(onlineUsername);
-        String url = apiAddresses.newGroupApiUrl;
+        String url = apiAddresses.getNewGroupApiUrl();
         GroupModel group = new GroupModel(onlineUsername, members, name);
         ResponseEntity<String> response = client.post().uri(url).bodyValue(group).retrieve().toEntity(String.class).block();
         if (response != null) {
@@ -257,7 +259,7 @@ public class CommandProcessor {
         if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUsername)) {
             return Commands.INVALID_MESSAGE_ID;
         }
-        String url = apiAddresses.deleteMessageApiUrl + "/" + messageId;
+        String url = apiAddresses.getDeleteMessageApiUrl() + "/" + messageId;
         ResponseEntity<String> response = client.delete().uri(url).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response == null) {
@@ -274,7 +276,7 @@ public class CommandProcessor {
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
         messageModel.setText(newText);
-        String url = apiAddresses.editMessageApiUrl + "/" + messageId;
+        String url = apiAddresses.getEditMessageApiUrl() + "/" + messageId;
         ResponseEntity<String> response = client.put().uri(url).bodyValue(messageModel).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response == null) {
@@ -284,7 +286,7 @@ public class CommandProcessor {
     }
 
     private MessageModel getMessage(Long messageId) {
-        String url = apiAddresses.getMessageApiUrl + "/" + messageId;
+        String url = apiAddresses.getGetMessageApiUrl() + "/" + messageId;
         ResponseEntity<MessageModel> response = client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(MessageModel.class).block();
         if (response == null) {
