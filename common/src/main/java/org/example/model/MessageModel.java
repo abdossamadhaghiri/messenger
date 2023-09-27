@@ -1,6 +1,7 @@
 package org.example.model;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -13,6 +14,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @Getter
+@EqualsAndHashCode
 public class MessageModel {
 
     private Long id;
