@@ -111,7 +111,7 @@ class ServerControllerTest {
         MessageModel messageModel = new MessageModel(4L, "hello javad!", "alireza", chats.get(1).getId());
         String url = "http://localhost:" + port + "/messages";
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("invalid message content!", result.getResponseBody()));
+                assertEquals(Commands.INVALID_MESSAGE_CONTENT, result.getResponseBody()));
     }
 
     @Test
@@ -120,7 +120,7 @@ class ServerControllerTest {
         MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId() + 1);
         String url = "http://localhost:" + port + "/messages";
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("invalid message content!", result.getResponseBody()));
+                assertEquals(Commands.INVALID_MESSAGE_CONTENT, result.getResponseBody()));
     }
 
     @Test
@@ -139,7 +139,7 @@ class ServerControllerTest {
         PvModel pvModel = new PvModel("alireza", "ali");
         String url = "http://localhost:" + port + "/chat";
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("username doesnt exist.", result.getResponseBody()));
+                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
@@ -147,7 +147,7 @@ class ServerControllerTest {
         PvModel pvModel = new PvModel("ali", "alireza");
         String url = "http://localhost:" + port + "/chat";
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("username doesnt exist.", result.getResponseBody()));
+                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
@@ -155,7 +155,7 @@ class ServerControllerTest {
         PvModel pvModel= new PvModel("ali", "reza");
         String url = "http://localhost:" + port + "/chat";
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the chat already exists.", result.getResponseBody()));
+                assertEquals(Commands.CHAT_ALREADY_EXISTS, result.getResponseBody()));
     }
 
     @Test
@@ -172,7 +172,7 @@ class ServerControllerTest {
         GroupModel groupModel = new GroupModel("ali", new ArrayList<>(List.of("ali", "reza", "alireza")), "groupName");
         String url = "http://localhost:" + port + "/groups";
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("invalid group content!", result.getResponseBody()));
+                assertEquals(Commands.INVALID_GROUP_CONTENT, result.getResponseBody()));
     }
 
     @Test
@@ -190,7 +190,7 @@ class ServerControllerTest {
         long messageId = messageRepository.findAll().get(2).getId() + 1;
         String url = "http://localhost:" + port + "/messages/" + messageId;
         client.delete().uri(url).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the message doesnt exist!", result.getResponseBody()));
+                assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
@@ -207,7 +207,7 @@ class ServerControllerTest {
         Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
         String url = "http://localhost:" + port + "/messages/" + (message.getId() + 1);
         client.put().uri(url).bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals("the message doesnt exist!", result.getResponseBody()));
+                assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test

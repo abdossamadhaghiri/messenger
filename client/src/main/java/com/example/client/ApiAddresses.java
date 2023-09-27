@@ -1,9 +1,11 @@
 package com.example.client;
 
+import lombok.Getter;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ApiAddresses {
+@Getter
+public final class ApiAddresses {
 
     public ApiAddresses(ServerAddress serverAddress) {
         signUpApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/signUp";
@@ -20,16 +22,16 @@ public class ApiAddresses {
 
     }
 
-    public String signUpApiUrl;
-    public String signInApiUrl;
-    public String getChatsApiUrl;
-    public String getMessagesInOldChatApiUrl;
-    public String enterNewChatApiUrl;
-    public String getChatIdApiUrl;
-    public String sendMessageApiUrl;
-    public String newGroupApiUrl;
-    public String deleteMessageApiUrl;
-    public String editMessageApiUrl;
-    public String getMessageApiUrl;
+    private final String signUpApiUrl;
+    private final String signInApiUrl;
+    private final String getChatsApiUrl;
+    private final String getMessagesInOldChatApiUrl;
+    private final String enterNewChatApiUrl;
+    private final String getChatIdApiUrl;
+    private final String sendMessageApiUrl;
+    private final String newGroupApiUrl;
+    private final String deleteMessageApiUrl;
+    private final String editMessageApiUrl;
+    private final String getMessageApiUrl;
 
 }

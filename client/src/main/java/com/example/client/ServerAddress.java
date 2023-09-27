@@ -7,10 +7,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConfigurationProperties(prefix = "server")
+@Getter
+@Setter
 public class ServerAddress {
 
-    private @Getter @Setter String address;
+    private String address;
 
-    private @Getter @Setter int port;
+    private int port;
 
 }

@@ -1,20 +1,27 @@
 package org.example.model;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 @AllArgsConstructor
 @RequiredArgsConstructor
 @NoArgsConstructor
 @ToString
+@Getter
 public class MessageModel {
 
-    private @Getter Long id;
+    private Long id;
 
-    private @NonNull @Getter @Setter String text;
+    private @NonNull @Setter String text;
 
-    private @NonNull @Getter String sender;
+    private @NonNull String sender;
 
-    private @NonNull @Getter Long chatId;
+    private @NonNull Long chatId;
 
 
 }

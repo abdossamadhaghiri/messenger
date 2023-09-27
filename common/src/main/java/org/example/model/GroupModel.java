@@ -8,11 +8,12 @@ import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
 public class GroupModel extends ChatModel {
 
-    private @Getter String owner;
-    private @Getter List<String> members;
-    private @Getter String name;
+    private String owner;
+    private List<String> members;
+    private String name;
 
     public GroupModel(Long id, String owner, List<String> members, String name) {
         this.setId(id);
