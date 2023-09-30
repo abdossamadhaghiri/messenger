@@ -208,7 +208,7 @@ public class CommandProcessor {
     }
 
     private Long getChatId(String username) {
-        String url = apiAddresses.getGetChatIdApiUrl() + onlineUsername.getUsername() + "/" + username;
+        String url = apiAddresses.getGetChatIdApiUrl() + "/" + onlineUsername.getUsername() + "/" + username;
         ResponseEntity<Long> response = client.get().uri(url).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(Long.class).block();
 
