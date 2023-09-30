@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
 @Configuration
 public class CommandProcessor {
@@ -159,18 +160,30 @@ public class CommandProcessor {
                 }
                 case "2" -> {
                     System.out.println("enter your message id:");
-                    Long messageId = Long.valueOf(scanner.nextLine());
-                    System.out.println(deleteMessage(messageId, chatId));
+                    String messageId = scanner.nextLine();
+                    if (isNumeric(messageId)) {
+                        System.out.println(deleteMessage(Long.valueOf(messageId), chatId));
+                    } else {
+                        System.out.println(Commands.INVALID_MESSAGE_ID);
+                    }
                 }
                 case "3" -> {
                     System.out.println("enter your message id:");
-                    Long messageId = Long.valueOf(scanner.nextLine());
-                    System.out.println(editMessage(messageId, chatId));
+                    String messageId = scanner.nextLine();
+                    if (isNumeric(messageId)) {
+                        System.out.println(editMessage(Long.valueOf(messageId), chatId));
+                    } else {
+                        System.out.println(Commands.INVALID_MESSAGE_ID);
+                    }
                 }
                 case "4" -> flag = false;
                 default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
+    }
+
+    private boolean isNumeric(String input) {
+        return Pattern.matches("\\d+", input);
     }
 
     private boolean canEnterOldChat(Long chatId) {
