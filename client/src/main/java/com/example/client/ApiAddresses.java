@@ -1,6 +1,7 @@
 package com.example.client;
 
 import lombok.Getter;
+import org.example.UrlPaths;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -8,17 +9,17 @@ import org.springframework.stereotype.Component;
 public final class ApiAddresses {
 
     public ApiAddresses(ServerAddress serverAddress) {
-        signUpApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/signUp";
-        signInApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/signIn/";
-        getChatsApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/chats/";
-        getMessagesInOldChatApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages/";
-        enterNewChatApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/chat";
-        getChatIdApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/chatId/";
-        sendMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
-        newGroupApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/groups";
-        deleteMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
-        editMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
-        getMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + "/messages";
+        signUpApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.SIGN_UP_API_URL;
+        signInApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.SIGN_IN_API_URL;
+        getChatsApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.GET_CHATS_API_URL;
+        getMessagesInOldChatApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.GET_MESSAGE_API_URL;
+        enterNewChatApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.NEW_PV_API_URL;
+        getChatIdApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.GET_CHAT_ID_API_URL;
+        sendMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.NEW_MESSAGE_API_URL;
+        newGroupApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.NEW_GROUP_API_URL;
+        deleteMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.DELETE_MESSAGE_API_URL;
+        editMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.EDIT_MESSAGE_API_URL;
+        getMessageApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.GET_MESSAGE_API_URL;
 
     }
 

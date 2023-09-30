@@ -1,28 +1,28 @@
 package org.example.model;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
 @AllArgsConstructor
 @RequiredArgsConstructor
 @NoArgsConstructor
-@ToString
-@Getter
-@EqualsAndHashCode
+@Data
 public class MessageModel {
 
+    @Setter(AccessLevel.NONE)
     private Long id;
 
-    private @NonNull @Setter String text;
+    private @NonNull String text;
 
+    @Setter(AccessLevel.NONE)
     private @NonNull String sender;
 
+    @Setter(AccessLevel.NONE)
     private @NonNull Long chatId;
 
 
