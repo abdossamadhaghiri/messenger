@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import org.example.model.ChatModel;
 import org.example.model.PvModel;
 
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
