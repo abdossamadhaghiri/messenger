@@ -15,5 +15,5 @@ public class Commands {
     public static final String MESSAGE_DELETED = "the message deleted!";
     public static final String MESSAGE_EDITED = "the message edited!";
     public static final String INVALID_TOKEN = "invalid token!";
-    public static final String MESSAGE_DOESNT_YOUR_MESSAGE = "the message doesnt your message!";
+    public static final String MESSAGE_IS_NOT_YOUR_MESSAGE = "the message isn't your message!";
 }
