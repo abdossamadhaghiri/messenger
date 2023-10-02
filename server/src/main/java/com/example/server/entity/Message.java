@@ -29,7 +29,7 @@ public class Message {
     private @NonNull Long chatId;
 
     public MessageModel createMessageModel() {
-        return new MessageModel(((long) this.id), this.text, this.sender, this.chatId);
+        return new MessageModel(this.id, this.text, this.sender, this.chatId);
     }
 
 }
