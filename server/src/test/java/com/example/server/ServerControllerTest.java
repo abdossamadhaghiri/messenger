@@ -213,7 +213,7 @@ class ServerControllerTest {
         User user = userRepository.findById(messageRepository.findAll().get(1).getSender()).get();
         String url = UrlPaths.DELETE_MESSAGE_API_URL + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest()
-                .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_DOESNT_YOUR_MESSAGE, result.getResponseBody()));
+                .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
     }
 
     @Test
@@ -254,7 +254,7 @@ class ServerControllerTest {
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken())
                 .bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                        assertEquals(Commands.MESSAGE_DOESNT_YOUR_MESSAGE, result.getResponseBody()));
+                        assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
     }
 
     @Test

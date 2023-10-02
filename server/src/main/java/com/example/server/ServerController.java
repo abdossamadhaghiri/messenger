@@ -153,7 +153,7 @@ public class ServerController {
             return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
         if (!message.get().getSender().equals(user.get().getUsername())) {
-            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_YOUR_MESSAGE, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
         messageRepository.deleteById(messageId);
         return new ResponseEntity<>(Commands.MESSAGE_DELETED, HttpStatus.OK);
@@ -171,7 +171,7 @@ public class ServerController {
             return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
         if (!message.get().getSender().equals(user.get().getUsername())) {
-            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_YOUR_MESSAGE, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
         message.get().setText(messageModel.getText());
         messageRepository.save(message.get());
