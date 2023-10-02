@@ -1,24 +1,21 @@
 package org.example.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.Value;
 
 @AllArgsConstructor
-@RequiredArgsConstructor
-@NoArgsConstructor
-@Data
+@NoArgsConstructor(force = true)
+@Value
 public class MessageModel {
 
-    private Long id;
+    Long id;
 
-    private @NonNull String text;
+    String text;
 
-    private @NonNull String sender;
+    String sender;
 
-    private @NonNull Long chatId;
+    Long chatId;
 
 
 }

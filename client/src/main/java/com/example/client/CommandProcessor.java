@@ -223,7 +223,7 @@ public class CommandProcessor {
     }
 
     private String sendMessage(String text, Long chatId) {
-        MessageModel messageModel = new MessageModel(text, onlineUsername.getUsername(), chatId);
+        MessageModel messageModel = new MessageModel(0L, text, onlineUsername.getUsername(), chatId);
         String url = apiAddresses.getSendMessageApiUrl();
         ResponseEntity<String> response = client.post().uri(url).bodyValue(messageModel).retrieve().toEntity(String.class).block();
         return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
@@ -291,9 +291,9 @@ public class CommandProcessor {
         }
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
-        messageModel.setText(newText);
+        MessageModel newMessageModel = new MessageModel(messageModel.getId(), newText, messageModel.getSender(), messageModel.getChatId());
         String url = apiAddresses.getEditMessageApiUrl() + "/" + messageId;
-        ResponseEntity<String> response = client.put().uri(url).header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken()).bodyValue(messageModel).retrieve()
+        ResponseEntity<String> response = client.put().uri(url).header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken()).bodyValue(newMessageModel).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
         if (response == null) {
             return Commands.PLEASE_TRY_AGAIN;
