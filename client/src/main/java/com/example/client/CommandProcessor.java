@@ -291,7 +291,7 @@ public class CommandProcessor {
         }
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
-        MessageModel newMessageModel = new MessageModel(messageModel.getId(), newText, messageModel.getSender(), messageModel.getChatId());
+        MessageModel newMessageModel = messageModel.toBuilder().text(newText).build();
         String url = apiAddresses.getEditMessageApiUrl() + "/" + messageId;
         ResponseEntity<String> response = client.put().uri(url).header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken()).bodyValue(newMessageModel).retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty()).toEntity(String.class).block();
