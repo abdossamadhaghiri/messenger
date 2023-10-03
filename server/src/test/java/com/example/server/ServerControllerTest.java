@@ -228,9 +228,9 @@ class ServerControllerTest {
     @Test
     void testEditMessage_invalidToken() {
         Message message = messageRepository.findAll().get(2);
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
-        client.put().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).bodyValue(newMessage)
+        client.put().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).bodyValue(messageModel)
                 .exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                         assertEquals(Commands.INVALID_TOKEN, result.getResponseBody()));
     }
@@ -239,33 +239,33 @@ class ServerControllerTest {
     void testEditMessage_messageDoesntExists() {
         Message message = messageRepository.findAll().get(2);
         User sender = userRepository.findById(message.getSender()).get();
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
         String url = UrlPaths.EDIT_MESSAGE_API_URL + (message.getId() + 1);
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken())
-                .bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                .bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                         assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
     void testEditMessage_messageDoesntYourMessage() {
         Message message = messageRepository.findAll().get(2);
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
         User user = userRepository.findById(messageRepository.findAll().get(1).getSender()).get();
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken())
-                .bodyValue(newMessage).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                .bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                         assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
     }
 
     @Test
     void testEditMessage_ok() {
         Message message = messageRepository.findAll().get(2);
-        Message newMessage = new Message("edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken())
-                .bodyValue(newMessage).exchange().expectStatus().isOk();
-        assertEquals(newMessage.getText(), messageRepository.findById(message.getId()).get().getText());
+                .bodyValue(messageModel).exchange().expectStatus().isOk();
+        assertEquals(messageModel.getText(), messageRepository.findById(message.getId()).get().getText());
     }
 
     @Test
