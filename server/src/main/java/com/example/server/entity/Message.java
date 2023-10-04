@@ -5,17 +5,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.NonNull;
 import org.example.model.MessageModel;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@RequiredArgsConstructor
 @Data
 @Entity
+@Builder
 public class Message {
 
     @Id
@@ -28,7 +28,8 @@ public class Message {
 
     private @NonNull Long chatId;
 
-    private @NonNull Long repliedMessageId;
+    @Builder.Default
+    private @NonNull Long repliedMessageId = 0L;
 
     public MessageModel createMessageModel() {
         return new MessageModel(this.id, this.text, this.sender, this.chatId, this.repliedMessageId);

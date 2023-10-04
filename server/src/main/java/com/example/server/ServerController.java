@@ -141,7 +141,12 @@ public class ServerController {
         if (repliedMessage.isPresent() && !messageModel.getChatId().equals(repliedMessage.get().getChatId())) {
             return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.BAD_REQUEST);
         }
-        Message message = new Message(messageModel.getText(), messageModel.getSender(), messageModel.getChatId(), messageModel.getRepliedMessageId());
+         Message message = Message.builder()
+                 .text(messageModel.getText())
+                 .sender(messageModel.getSender())
+                 .chatId(messageModel.getChatId())
+                 .repliedMessageId(messageModel.getRepliedMessageId())
+                 .build();
         messageRepository.save(message);
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }

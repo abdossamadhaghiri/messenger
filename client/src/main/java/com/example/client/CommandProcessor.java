@@ -248,7 +248,7 @@ public class CommandProcessor {
     }
 
     private String sendMessage(String text, Long chatId, Long repliedMessageId) {
-        MessageModel messageModel = new MessageModel(0L, text, onlineUsername.getUsername(), chatId, repliedMessageId);
+        MessageModel messageModel = MessageModel.builder().text(text).sender(onlineUsername.getUsername()).chatId(chatId).repliedMessageId(repliedMessageId).build();
         String url = apiAddresses.getSendMessageApiUrl();
         ResponseEntity<String> response = client.post().uri(url).bodyValue(messageModel).retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
