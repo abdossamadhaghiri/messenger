@@ -19,7 +19,8 @@ public class MessageModel {
 
     Long chatId;
 
-    Long repliedMessageId;
+    @Builder.Default
+    Long repliedMessageId = 0L;
 
 
 }

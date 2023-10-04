@@ -61,9 +61,9 @@ class ServerControllerTest {
         chatRepository.saveAll(List.of(pv1, pv2, pv3));
         List<Chat> chats = chatRepository.findAll();
 
-        Message message1 = new Message(1L, "aaa", "ali", chats.get(0).getId(), 0L);
-        Message message2 = new Message(2L, "bbb", "ali", chats.get(1).getId(), 0L);
-        Message message3 = new Message(3L, "ccc", "reza", chats.get(2).getId(), 0L);
+        Message message1 = Message.builder().id(1L).text("aaa").sender("ali").chatId(chats.get(0).getId()).build();
+        Message message2 = Message.builder().id(2L).text("bbb").sender("ali").chatId(chats.get(1).getId()).build();
+        Message message3 = Message.builder().id(3L).text("ccc").sender("reza").chatId(chats.get(2).getId()).build();
         messageRepository.saveAll(List.of(message1, message2, message3));
 
 
@@ -113,7 +113,11 @@ class ServerControllerTest {
     @Test
     void testNewMessage_invalidSender() {
         List<Chat> chats = chatRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "alireza", chats.get(1).getId(), 0L);
+        MessageModel messageModel = MessageModel.builder()
+                .text("hello javad!")
+                .sender("alireza")
+                .chatId(chats.get(1).getId())
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
@@ -122,7 +126,11 @@ class ServerControllerTest {
     @Test
     void testNewMessage_chatDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId() + 1, 0L);
+        MessageModel messageModel = MessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(2).getId() + 1)
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.CHAT_DOESNT_EXIST, result.getResponseBody()));
@@ -131,7 +139,11 @@ class ServerControllerTest {
     @Test
     void testNewMessage_chatDoesntInSendersChat() {
         List<Chat> chats = chatRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId(), 0L);
+        MessageModel messageModel = MessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(2).getId())
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.CHAT_IS_NOT_YOUR_CHAT, result.getResponseBody()));
@@ -141,7 +153,12 @@ class ServerControllerTest {
     void testNewMessage_repliedMessageDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(1).getId(), messages.get(2).getId() + 1);
+        MessageModel messageModel = MessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .repliedMessageId(messages.get(2).getId() + 1)
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.REPLIED_MESSAGE_DOESNT_EXIST, result.getResponseBody()));
@@ -151,7 +168,12 @@ class ServerControllerTest {
     void testNewMessage_repliedMessageDoesntInThisChat() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(1).getId(), messages.get(2).getId());
+        MessageModel messageModel = MessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .repliedMessageId(messages.get(2).getId())
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, result.getResponseBody()));
@@ -161,10 +183,20 @@ class ServerControllerTest {
     void testNewMessage_ok_notReply() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
-        MessageModel messageModel = new MessageModel(messages.get(2).getId() + 1, "hello javad!", "ali", chats.get(1).getId(), 0L);
+        MessageModel messageModel = MessageModel.builder()
+                .id(messages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = new Message(messageModel.getId(), messageModel.getText(), messageModel.getSender(), messageModel.getChatId(), 0L);
+        Message message = Message.builder()
+                .id(messageModel.getId())
+                .text(messageModel.getText())
+                .sender(messageModel.getSender())
+                .chatId(messageModel.getChatId())
+                .build();
         assertThat(message).isIn(messageRepository.findAll());
     }
 
@@ -172,10 +204,21 @@ class ServerControllerTest {
     void testNewMessage_ok_reply() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
-        MessageModel messageModel = new MessageModel(messages.get(2).getId() + 1, "hello javad!", "ali", chats.get(1).getId(), messages.get(1).getId());
+        MessageModel messageModel = MessageModel.builder()
+                .id(messages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = new Message(messageModel.getId(), messageModel.getText(), messageModel.getSender(), messageModel.getChatId(), messageModel.getRepliedMessageId());
+        Message message = Message.builder()
+                .id(messageModel.getId())
+                .text(messageModel.getText())
+                .sender(messageModel.getSender())
+                .chatId(messageModel.getChatId())
+                .repliedMessageId(messageModel.getRepliedMessageId())
+                .build();
         assertThat(message).isIn(messageRepository.findAll());
     }
 
