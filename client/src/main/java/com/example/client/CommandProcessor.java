@@ -233,18 +233,23 @@ public class CommandProcessor {
         System.out.println("1. send\n2. reply");
         String option = scanner.nextLine();
         long repliedMessageId = 0;
-        if (!option.equals("1") && !option.equals("2")) {
-            return Commands.INVALID_COMMAND;
-        }
-        if (option.equals("2")) {
-            System.out.println("enter your message id:");
-            String input = scanner.nextLine();
-            if (!isNumeric(input)) {
-                return Commands.INVALID_MESSAGE_ID;
+        switch (option) {
+            case "1" -> {
+                return sendMessage(text, chatId, repliedMessageId);
             }
-            repliedMessageId = Long.parseLong(input);
+            case "2" -> {
+                System.out.println("enter your message id:");
+                String input = scanner.nextLine();
+                if (!isNumeric(input)) {
+                    return Commands.INVALID_MESSAGE_ID;
+                }
+                repliedMessageId = Long.parseLong(input);
+                return sendMessage(text, chatId, repliedMessageId);
+            }
+            default -> {
+                return Commands.INVALID_COMMAND;
+            }
         }
-        return sendMessage(text, chatId, repliedMessageId);
     }
 
     private String sendMessage(String text, Long chatId, Long repliedMessageId) {
