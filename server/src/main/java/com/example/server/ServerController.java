@@ -104,10 +104,10 @@ public class ServerController {
 
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
         for (Chat chat : chatRepository.findAll()) {
-            if (chat instanceof Pv pv && ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
+            if (chat instanceof Pv pv &&
+                    ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
                     (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
                 return pv;
-
             }
         }
         return null;
@@ -141,12 +141,12 @@ public class ServerController {
         if (repliedMessage.isPresent() && !messageModel.getChatId().equals(repliedMessage.get().getChatId())) {
             return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.BAD_REQUEST);
         }
-         Message message = Message.builder()
-                 .text(messageModel.getText())
-                 .sender(messageModel.getSender())
-                 .chatId(messageModel.getChatId())
-                 .repliedMessageId(messageModel.getRepliedMessageId())
-                 .build();
+        Message message = Message.builder()
+                .text(messageModel.getText())
+                .sender(messageModel.getSender())
+                .chatId(messageModel.getChatId())
+                .repliedMessageId(messageModel.getRepliedMessageId())
+                .build();
         messageRepository.save(message);
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }
