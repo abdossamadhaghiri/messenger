@@ -105,8 +105,8 @@ public class ServerController {
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
         for (Chat chat : chatRepository.findAll()) {
             if (chat instanceof Pv pv && ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
-                        (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
-                    return pv;
+                    (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
+                return pv;
 
             }
         }
@@ -124,10 +124,24 @@ public class ServerController {
 
     @PostMapping("/messages")
     public ResponseEntity<String> newMessage(@RequestBody MessageModel messageModel) {
-        if (!userRepository.existsById(messageModel.getSender()) || !chatRepository.existsById(messageModel.getChatId())) {
-            return new ResponseEntity<>(Commands.INVALID_MESSAGE_CONTENT, HttpStatus.BAD_REQUEST);
+        if (!userRepository.existsById(messageModel.getSender())) {
+            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
-        Message message = new Message(messageModel.getText(), messageModel.getSender(), messageModel.getChatId());
+        Optional<Chat> chat = chatRepository.findById(messageModel.getChatId());
+        if (chat.isEmpty()) {
+            return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        }
+        if (!isInChats(messageModel.getSender(), chat.get())) {
+            return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.BAD_REQUEST);
+        }
+        Optional<Message> repliedMessage = messageRepository.findById(messageModel.getRepliedMessageId());
+        if (!messageModel.getRepliedMessageId().equals(0L) && repliedMessage.isEmpty()) {
+            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        }
+        if (repliedMessage.isPresent() && !messageModel.getChatId().equals(repliedMessage.get().getChatId())) {
+            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.BAD_REQUEST);
+        }
+        Message message = new Message(messageModel.getText(), messageModel.getSender(), messageModel.getChatId(), messageModel.getRepliedMessageId());
         messageRepository.save(message);
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }

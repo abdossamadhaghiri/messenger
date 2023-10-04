@@ -19,5 +19,7 @@ public class MessageModel {
 
     Long chatId;
 
+    Long repliedMessageId;
+
 
 }

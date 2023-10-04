@@ -61,9 +61,9 @@ class ServerControllerTest {
         chatRepository.saveAll(List.of(pv1, pv2, pv3));
         List<Chat> chats = chatRepository.findAll();
 
-        Message message1 = new Message(1L, "aaa", "ali", chats.get(0).getId());
-        Message message2 = new Message(2L, "bbb", "ali", chats.get(1).getId());
-        Message message3 = new Message(3L, "ccc", "reza", chats.get(2).getId());
+        Message message1 = new Message(1L, "aaa", "ali", chats.get(0).getId(), 0L);
+        Message message2 = new Message(2L, "bbb", "ali", chats.get(1).getId(), 0L);
+        Message message3 = new Message(3L, "ccc", "reza", chats.get(2).getId(), 0L);
         messageRepository.saveAll(List.of(message1, message2, message3));
 
 
@@ -113,29 +113,69 @@ class ServerControllerTest {
     @Test
     void testNewMessage_invalidSender() {
         List<Chat> chats = chatRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "alireza", chats.get(1).getId());
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "alireza", chats.get(1).getId(), 0L);
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.INVALID_MESSAGE_CONTENT, result.getResponseBody()));
+                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
     void testNewMessage_chatDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
-        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId() + 1);
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId() + 1, 0L);
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.INVALID_MESSAGE_CONTENT, result.getResponseBody()));
+                assertEquals(Commands.CHAT_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
-    void testNewMessage_ok() {
+    void testNewMessage_chatDoesntInSendersChat() {
+        List<Chat> chats = chatRepository.findAll();
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(2).getId(), 0L);
+        String url = UrlPaths.NEW_MESSAGE_API_URL;
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                assertEquals(Commands.CHAT_IS_NOT_YOUR_CHAT, result.getResponseBody()));
+    }
+
+    @Test
+    void testNewMessage_repliedMessageDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
-        MessageModel messageModel = new MessageModel(messages.get(2).getId() + 1, "hello javad!", "ali", chats.get(1).getId());
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(1).getId(), messages.get(2).getId() + 1);
+        String url = UrlPaths.NEW_MESSAGE_API_URL;
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                assertEquals(Commands.REPLIED_MESSAGE_DOESNT_EXIST, result.getResponseBody()));
+    }
+
+    @Test
+    void testNewMessage_repliedMessageDoesntInThisChat() {
+        List<Chat> chats = chatRepository.findAll();
+        List<Message> messages = messageRepository.findAll();
+        MessageModel messageModel = new MessageModel(4L, "hello javad!", "ali", chats.get(1).getId(), messages.get(2).getId());
+        String url = UrlPaths.NEW_MESSAGE_API_URL;
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
+                assertEquals(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, result.getResponseBody()));
+    }
+
+    @Test
+    void testNewMessage_ok_notReply() {
+        List<Chat> chats = chatRepository.findAll();
+        List<Message> messages = messageRepository.findAll();
+        MessageModel messageModel = new MessageModel(messages.get(2).getId() + 1, "hello javad!", "ali", chats.get(1).getId(), 0L);
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = new Message(messages.get(2).getId() + 1, messageModel.getText(), messageModel.getSender(), messageModel.getChatId());
+        Message message = new Message(messageModel.getId(), messageModel.getText(), messageModel.getSender(), messageModel.getChatId(), 0L);
+        assertThat(message).isIn(messageRepository.findAll());
+    }
+
+    @Test
+    void testNewMessage_ok_reply() {
+        List<Chat> chats = chatRepository.findAll();
+        List<Message> messages = messageRepository.findAll();
+        MessageModel messageModel = new MessageModel(messages.get(2).getId() + 1, "hello javad!", "ali", chats.get(1).getId(), messages.get(1).getId());
+        String url = UrlPaths.NEW_MESSAGE_API_URL;
+        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
+        Message message = new Message(messageModel.getId(), messageModel.getText(), messageModel.getSender(), messageModel.getChatId(), messageModel.getRepliedMessageId());
         assertThat(message).isIn(messageRepository.findAll());
     }
 
@@ -228,7 +268,7 @@ class ServerControllerTest {
     @Test
     void testEditMessage_invalidToken() {
         Message message = messageRepository.findAll().get(2);
-        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId(), 0L);
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).bodyValue(messageModel)
                 .exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
@@ -239,7 +279,7 @@ class ServerControllerTest {
     void testEditMessage_messageDoesntExists() {
         Message message = messageRepository.findAll().get(2);
         User sender = userRepository.findById(message.getSender()).get();
-        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId(), 0L);
         String url = UrlPaths.EDIT_MESSAGE_API_URL + (message.getId() + 1);
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken())
                 .bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
@@ -249,7 +289,7 @@ class ServerControllerTest {
     @Test
     void testEditMessage_messageDoesntYourMessage() {
         Message message = messageRepository.findAll().get(2);
-        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId(), 0L);
         User user = userRepository.findById(messageRepository.findAll().get(1).getSender()).get();
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken())
@@ -260,7 +300,7 @@ class ServerControllerTest {
     @Test
     void testEditMessage_ok() {
         Message message = messageRepository.findAll().get(2);
-        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId());
+        MessageModel messageModel = new MessageModel(message.getId(), "edited text!", message.getSender(), message.getChatId(), 0L);
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken())

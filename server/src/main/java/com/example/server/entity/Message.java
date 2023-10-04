@@ -28,8 +28,10 @@ public class Message {
 
     private @NonNull Long chatId;
 
+    private @NonNull Long repliedMessageId;
+
     public MessageModel createMessageModel() {
-        return new MessageModel(this.id, this.text, this.sender, this.chatId);
+        return new MessageModel(this.id, this.text, this.sender, this.chatId, this.repliedMessageId);
     }
 
 }

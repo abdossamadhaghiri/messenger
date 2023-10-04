@@ -6,6 +6,10 @@ public class Commands {
     public static final String USERNAME_DOESNT_EXIST = "the username doesnt exist";
     public static final String SUCCESSFULLY_SIGNED_UP = "successfully signed up";
     public static final String CHAT_ALREADY_EXISTS = "the chat already exists";
+    public static final String CHAT_DOESNT_EXIST = "the chat doesnt exist";
+    public static final String CHAT_IS_NOT_YOUR_CHAT = "the chat isn't your chat!";
+    public static final String REPLIED_MESSAGE_DOESNT_EXIST = "the replied message doesnt exist!";
+    public static final String REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT = "the replied message isn't in this chat!";
     public static final String START_YOUR_CHAT = "start your chat";
     public static final String INVALID_MESSAGE_CONTENT = "invalid message content!";
     public static final String SENT = "sent!";

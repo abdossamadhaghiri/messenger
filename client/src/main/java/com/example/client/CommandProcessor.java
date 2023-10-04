@@ -147,8 +147,7 @@ public class CommandProcessor {
     private void chat(Long chatId) {
         boolean flag = true;
         while (flag) {
-            getMessagesInOldChat(chatId).getBody().forEach(message ->
-                    System.err.println(message.getId() + ". " + recognizeSender(message.getSender()) + ": " + message.getText()));
+            getMessagesInOldChat(chatId).getBody().forEach(this::printMessageInChat);
 
             System.out.println("1. send message\n2. delete message\n3. edit message\n4. back");
             String option = scanner.nextLine();
@@ -156,7 +155,7 @@ public class CommandProcessor {
                 case "1" -> {
                     System.out.println("write your message:");
                     String text = scanner.nextLine();
-                    System.out.println(sendMessage(text, chatId));
+                    System.out.println(writeMessage(text, chatId));
                 }
                 case "2" -> {
                     System.out.println("enter your message id:");
@@ -179,6 +178,14 @@ public class CommandProcessor {
                 case "4" -> flag = false;
                 default -> System.out.println(Commands.INVALID_COMMAND);
             }
+        }
+    }
+
+    private void printMessageInChat(MessageModel messageModel) {
+        if (messageModel.getRepliedMessageId() == 0L) {
+            System.err.println(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
+        } else {
+            System.err.println(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText());
         }
     }
 
@@ -222,10 +229,29 @@ public class CommandProcessor {
         return sender;
     }
 
-    private String sendMessage(String text, Long chatId) {
-        MessageModel messageModel = new MessageModel(0L, text, onlineUsername.getUsername(), chatId);
+    private String writeMessage(String text, Long chatId) {
+        System.out.println("1. send\n2. reply");
+        String option = scanner.nextLine();
+        long repliedMessageId = 0;
+        if (!option.equals("1") && !option.equals("2")) {
+            return Commands.INVALID_COMMAND;
+        }
+        if (option.equals("2")) {
+            System.out.println("enter your message id:");
+            String input = scanner.nextLine();
+            if (!isNumeric(input)) {
+                return Commands.INVALID_MESSAGE_ID;
+            }
+            repliedMessageId = Long.parseLong(input);
+        }
+        return sendMessage(text, chatId, repliedMessageId);
+    }
+
+    private String sendMessage(String text, Long chatId, Long repliedMessageId) {
+        MessageModel messageModel = new MessageModel(0L, text, onlineUsername.getUsername(), chatId, repliedMessageId);
         String url = apiAddresses.getSendMessageApiUrl();
-        ResponseEntity<String> response = client.post().uri(url).bodyValue(messageModel).retrieve().toEntity(String.class).block();
+        ResponseEntity<String> response = client.post().uri(url).bodyValue(messageModel).retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty()).toEntity(String.class).block();
         return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
     }
 
