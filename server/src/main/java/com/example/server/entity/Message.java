@@ -32,7 +32,14 @@ public class Message {
     private @NonNull Long repliedMessageId = 0L;
 
     public MessageModel createMessageModel() {
-        return new MessageModel(this.id, this.text, this.sender, this.chatId, this.repliedMessageId);
+        return MessageModel.builder()
+                .id(id)
+                .text(text)
+                .sender(sender)
+                .chatId(chatId)
+                .repliedMessageId(repliedMessageId)
+                .build();
+
     }
 
 }
