@@ -150,7 +150,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void testNewMessage_repliedMessageDoesntExists() {
+    void newMessage_repliedMessageDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
@@ -165,7 +165,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void testNewMessage_repliedMessageDoesntInThisChat() {
+    void newMessage_repliedMessageDoesntInThisChat() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
@@ -180,7 +180,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void testNewMessage_ok_notReply() {
+    void newMessage_ok_notReply() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
@@ -201,7 +201,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void testNewMessage_ok_reply() {
+    void newMessage_ok_reply() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
