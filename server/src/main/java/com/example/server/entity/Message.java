@@ -31,6 +31,8 @@ public class Message {
     @Builder.Default
     private @NonNull Long repliedMessageId = 0L;
 
+    private String forwardedFrom;
+
     public MessageModel createMessageModel() {
         return MessageModel.builder()
                 .id(id)
@@ -38,6 +40,7 @@ public class Message {
                 .sender(sender)
                 .chatId(chatId)
                 .repliedMessageId(repliedMessageId)
+                .forwardedFrom(forwardedFrom)
                 .build();
 
     }
