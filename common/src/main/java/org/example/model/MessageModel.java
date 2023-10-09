@@ -22,5 +22,7 @@ public class MessageModel {
     @Builder.Default
     Long repliedMessageId = 0L;
 
+    String forwardedFrom;
+
 
 }

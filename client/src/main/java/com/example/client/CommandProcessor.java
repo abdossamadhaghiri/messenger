@@ -159,7 +159,7 @@ public class CommandProcessor {
         while (flag) {
             getMessagesInOldChat(chatId).getBody().forEach(this::printMessageInChat);
 
-            System.out.println("1. send message\n2. delete message\n3. edit message\n4. back");
+            System.out.println("1. send message\n2. delete message\n3. edit message\n4. forward message\n5. back");
             String option = scanner.nextLine();
             switch (option) {
                 case "1" -> {
@@ -185,17 +185,28 @@ public class CommandProcessor {
                         System.out.println(Commands.INVALID_MESSAGE_ID);
                     }
                 }
-                case "4" -> flag = false;
+                case "4" -> {
+                    System.out.println("enter your message id:");
+                    String messageId = scanner.nextLine();
+                    if (isNumeric(messageId)) {
+                        forward(Long.valueOf(messageId), chatId);
+                    } else {
+                        System.out.println(Commands.INVALID_MESSAGE_ID);
+                    }
+                }
+                case "5" -> flag = false;
                 default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
     }
 
     private void printMessageInChat(MessageModel messageModel) {
-        if (messageModel.getRepliedMessageId() == 0L) {
-            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
-        } else {
+        if (messageModel.getRepliedMessageId() != 0L) {
             Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText());
+        } else if (messageModel.getForwardedFrom() != null) {
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " forwarded from " + messageModel.getForwardedFrom() + ": " + messageModel.getText());
+        } else {
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
         }
     }
 
@@ -255,7 +266,7 @@ public class CommandProcessor {
         long repliedMessageId = 0;
         switch (option) {
             case "1" -> {
-                return sendMessage(text, chatId, repliedMessageId);
+                return sendMessage(text, chatId, repliedMessageId, null);
             }
             case "2" -> {
                 System.out.println("enter your message id:");
@@ -264,7 +275,7 @@ public class CommandProcessor {
                     return Commands.INVALID_MESSAGE_ID;
                 }
                 repliedMessageId = Long.parseLong(input);
-                return sendMessage(text, chatId, repliedMessageId);
+                return sendMessage(text, chatId, repliedMessageId, null);
             }
             default -> {
                 return Commands.INVALID_COMMAND;
@@ -272,8 +283,14 @@ public class CommandProcessor {
         }
     }
 
-    private String sendMessage(String text, Long chatId, Long repliedMessageId) {
-        MessageModel messageModel = MessageModel.builder().text(text).sender(onlineUsername.getUsername()).chatId(chatId).repliedMessageId(repliedMessageId).build();
+    private String sendMessage(String text, Long chatId, Long repliedMessageId, String forwardedFrom) {
+        MessageModel messageModel = MessageModel.builder()
+                .text(text)
+                .sender(onlineUsername.getUsername())
+                .chatId(chatId)
+                .repliedMessageId(repliedMessageId)
+                .forwardedFrom(forwardedFrom)
+                .build();
         String url = apiAddresses.getSendMessageApiUrl();
         ResponseEntity<String> response = client.post()
                 .uri(url)
@@ -374,6 +391,37 @@ public class CommandProcessor {
             return Commands.PLEASE_TRY_AGAIN;
         }
         return response.getBody();
+    }
+
+    private void forward(Long messageId, Long chatId) {
+        MessageModel messageModel = getMessage(messageId);
+        if (messageModel == null || !messageModel.getChatId().equals(chatId)) {
+            System.out.println(Commands.INVALID_MESSAGE_ID);
+            return;
+        }
+        System.out.println("1. select chat\n2. enter a new username");
+        String option = scanner.nextLine();
+        if (option.equals("1")) {
+            System.out.println("enter your chat id:");
+            String input = scanner.nextLine();
+            if (!isNumeric(input)) {
+                System.out.println(Commands.INVALID_CHAT_ID);
+                return;
+            }
+            Long destinationChatId = Long.valueOf(input);
+            if (canEnterOldChat(destinationChatId)) {
+                System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+            }
+        } else if (option.equals("2")) {
+            System.out.println("enter the username:");
+            String username = scanner.nextLine();
+            if (canStartNewChat(username)) {
+                Long destinationChatId = getChatId(username);
+                System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+            }
+        } else {
+            System.out.println(Commands.INVALID_COMMAND);
+        }
     }
 
     private MessageModel getMessage(Long messageId) {
