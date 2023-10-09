@@ -203,9 +203,27 @@ class ServerControllerTest {
                 .expectBody(String.class)
                 .isEqualTo(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT);
     }
+    @Test
+    void newMessage_forwardedFromUsernameDoesntExist() {
+        List<Chat> chats = chatRepository.findAll();
+        MessageModel messageModel = MessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .forwardedFrom("alireza")
+                .build();
+        client.post()
+              .uri(UrlPaths.NEW_MESSAGE_API_URL)
+              .bodyValue(messageModel)
+              .exchange()
+              .expectStatus()
+              .isBadRequest()
+              .expectBody(String.class)
+              .isEqualTo(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST);
+    }
 
     @Test
-    void newMessage_ok_notReply() {
+    void newMessage_ok_notReply_notForward() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
@@ -226,7 +244,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_ok_reply() {
+    void newMessage_ok_reply_notForward() {
         List<Chat> chats = chatRepository.findAll();
         List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
@@ -234,6 +252,7 @@ class ServerControllerTest {
                 .text("hello javad!")
                 .sender("ali")
                 .chatId(chats.get(1).getId())
+                .repliedMessageId(messages.get(1).getId())
                 .build();
         client.post().uri(UrlPaths.NEW_MESSAGE_API_URL).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.builder()
@@ -242,6 +261,52 @@ class ServerControllerTest {
                 .sender(messageModel.getSender())
                 .chatId(messageModel.getChatId())
                 .repliedMessageId(messageModel.getRepliedMessageId())
+                .build();
+        assertThat(message).isIn(messageRepository.findAll());
+    }
+
+    @Test
+    void newMessage_ok_notReply_forward() {
+        List<Chat> chats = chatRepository.findAll();
+        List<Message> messages = messageRepository.findAll();
+        MessageModel messageModel = MessageModel.builder()
+                .id(messages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .forwardedFrom("javad")
+                .build();
+        client.post().uri(UrlPaths.NEW_MESSAGE_API_URL).bodyValue(messageModel).exchange().expectStatus().isOk();
+        Message message = Message.builder()
+                .id(messageModel.getId())
+                .text(messageModel.getText())
+                .sender(messageModel.getSender())
+                .chatId(messageModel.getChatId())
+                .forwardedFrom(messageModel.getForwardedFrom())
+                .build();
+        assertThat(message).isIn(messageRepository.findAll());
+    }
+
+    @Test
+    void newMessage_ok_reply_forward() {
+        List<Chat> chats = chatRepository.findAll();
+        List<Message> messages = messageRepository.findAll();
+        MessageModel messageModel = MessageModel.builder()
+                .id(messages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .chatId(chats.get(1).getId())
+                .repliedMessageId(messages.get(1).getId())
+                .forwardedFrom("javad")
+                .build();
+        client.post().uri(UrlPaths.NEW_MESSAGE_API_URL).bodyValue(messageModel).exchange().expectStatus().isOk();
+        Message message = Message.builder()
+                .id(messageModel.getId())
+                .text(messageModel.getText())
+                .sender(messageModel.getSender())
+                .chatId(messageModel.getChatId())
+                .repliedMessageId(messageModel.getRepliedMessageId())
+                .forwardedFrom(messageModel.getForwardedFrom())
                 .build();
         assertThat(message).isIn(messageRepository.findAll());
     }
