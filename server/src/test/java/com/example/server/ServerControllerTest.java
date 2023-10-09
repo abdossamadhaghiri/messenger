@@ -111,42 +111,57 @@ class ServerControllerTest {
     }
 
     @Test
-    void testNewMessage_invalidSender() {
+    void newMessage_invalidSender() {
         List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("alireza")
                 .chatId(chats.get(1).getId())
                 .build();
-        String url = UrlPaths.NEW_MESSAGE_API_URL;
-        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
+        client.post()
+              .uri(UrlPaths.NEW_MESSAGE_API_URL)
+              .bodyValue(messageModel)
+              .exchange()
+              .expectStatus()
+              .isBadRequest()
+              .expectBody(String.class)
+              .isEqualTo(Commands.USERNAME_DOESNT_EXIST);
     }
 
     @Test
-    void testNewMessage_chatDoesntExists() {
+    void newMessage_chatDoesntExists() {
         List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
                 .chatId(chats.get(2).getId() + 1)
                 .build();
-        String url = UrlPaths.NEW_MESSAGE_API_URL;
-        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.CHAT_DOESNT_EXIST, result.getResponseBody()));
+        client.post()
+              .uri(UrlPaths.NEW_MESSAGE_API_URL)
+              .bodyValue(messageModel)
+              .exchange()
+              .expectStatus()
+              .isBadRequest()
+              .expectBody(String.class)
+              .isEqualTo(Commands.CHAT_DOESNT_EXIST);
     }
 
     @Test
-    void testNewMessage_chatIsNotInSendersChat() {
+    void newMessage_chatIsNotInSendersChat() {
         List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
                 .chatId(chats.get(2).getId())
                 .build();
-        String url = UrlPaths.NEW_MESSAGE_API_URL;
-        client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.CHAT_IS_NOT_YOUR_CHAT, result.getResponseBody()));
+        client.post()
+              .uri(UrlPaths.NEW_MESSAGE_API_URL)
+              .bodyValue(messageModel)
+              .exchange()
+              .expectStatus()
+              .isBadRequest()
+              .expectBody(String.class)
+              .isEqualTo(Commands.CHAT_IS_NOT_YOUR_CHAT);
     }
 
     @Test
