@@ -67,11 +67,11 @@ public class CommandProcessor {
             switch (option) {
                 case "1" -> {
                     System.out.println("enter your chat id:");
-                    Long chatId = Long.valueOf(scanner.nextLine());
-                    if (canEnterOldChat(chatId)) {
-                        chat(chatId);
+                    String input = scanner.nextLine();
+                    if (isNumeric(input) && canEnterOldChat(Long.valueOf(input))) {
+                        chat(Long.valueOf(input));
                     } else {
-                        System.out.println("invalid id!");
+                        System.out.println(Commands.INVALID_CHAT_ID);
                     }
                 }
                 case "2" -> {
