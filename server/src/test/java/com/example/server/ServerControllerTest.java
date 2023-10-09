@@ -434,21 +434,32 @@ class ServerControllerTest {
     }
 
     @Test
-    void testGetMessage_messageDoesntYourMessage() {
+    void getMessage_messageIsNotInYourChats() {
         Message message = messageRepository.findAll().get(2);
-        User user = userRepository.findById(messageRepository.findAll().get(1).getSender()).get();
+        User user = userRepository.findById("ali").get();
         String url = UrlPaths.GET_MESSAGE_API_URL + message.getId();
-        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest();
+        client.get()
+              .uri(url)
+              .header(HttpHeaders.AUTHORIZATION, user.getToken())
+              .exchange()
+              .expectStatus()
+              .isBadRequest();
     }
 
     @Test
     void testGetMessage_ok() {
         Message message = messageRepository.findAll().get(2);
-        User sender = userRepository.findById(message.getSender()).get();
+        User user = userRepository.findById("javad").get();
         MessageModel expected = message.createMessageModel();
         String url = UrlPaths.GET_MESSAGE_API_URL + message.getId();
-        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk()
-                .expectBody(MessageModel.class).consumeWith(result -> assertEquals(result.getResponseBody(), expected));
+        client.get()
+              .uri(url)
+              .header(HttpHeaders.AUTHORIZATION, user.getToken())
+              .exchange()
+              .expectStatus()
+              .isOk()
+              .expectBody(MessageModel.class)
+              .isEqualTo(expected);
     }
 
 
