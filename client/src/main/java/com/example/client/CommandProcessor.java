@@ -29,7 +29,6 @@ public class CommandProcessor {
     private WebClient client;
     private UserModel onlineUsername;
     private Scanner scanner;
-    private final String ANSI_RESET = "\u001B[0m";
 
     public void run() {
         client = WebClient.create();
@@ -140,13 +139,24 @@ public class CommandProcessor {
 
     private void showChatList(List<ChatModel> chats) {
         for (ChatModel chat : chats) {
-            String ANSI_YELLOW = "\u001B[33m";
             if (chat instanceof PvModel pv) {
-                System.out.println(ANSI_YELLOW + "- " + getPeer(pv) + ": " + chat.getId() + ANSI_RESET);
+                printYellow("- " + getPeer(pv) + ": " + chat.getId());
             } else {
-                System.out.println(ANSI_YELLOW + "- " + ((GroupModel) chat).getName() + "(G): " + chat.getId() + ANSI_RESET);
+                printYellow("- " + ((GroupModel) chat).getName() + "(G): " + chat.getId());
             }
         }
+    }
+
+    private void printYellow(String text) {
+        String ANSI_YELLOW = "\u001B[33m";
+        String ANSI_RESET = "\u001B[0m";
+        System.out.println(ANSI_YELLOW + text + ANSI_RESET);
+    }
+
+    private void printGreen(String text) {
+        String ANSI_GREEN = "\u001B[32m";
+        String ANSI_RESET = "\u001B[0m";
+        System.out.println(ANSI_GREEN + text + ANSI_RESET);
     }
 
     private String getPeer(PvModel pv) {
@@ -194,11 +204,10 @@ public class CommandProcessor {
     }
 
     private void printMessageInChat(MessageModel messageModel) {
-        String ANSI_GREEN = "\u001B[32m";
         if (messageModel.getRepliedMessageId() == 0L) {
-            System.err.println(ANSI_GREEN + messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText() + ANSI_RESET);
+            printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
         } else {
-            System.err.println(ANSI_GREEN + messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText() + ANSI_RESET);
+            printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText());
         }
     }
 
