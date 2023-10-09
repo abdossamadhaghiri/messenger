@@ -10,6 +10,7 @@ public class Commands {
     public static final String CHAT_IS_NOT_YOUR_CHAT = "the chat isn't your chat!";
     public static final String REPLIED_MESSAGE_DOESNT_EXIST = "the replied message doesnt exist!";
     public static final String REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT = "the replied message isn't in this chat!";
+    public static final String FORWARDED_FROM_USERNAME_DOESNT_EXIST = "the \"forwarded from\" username doesnt exist!";
     public static final String START_YOUR_CHAT = "start your chat";
     public static final String SENT = "sent!";
     public static final String INVALID_GROUP_CONTENT = "invalid group content!";

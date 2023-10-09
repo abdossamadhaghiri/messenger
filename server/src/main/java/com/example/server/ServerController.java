@@ -141,11 +141,15 @@ public class ServerController {
         if (repliedMessage.isPresent() && !messageModel.getChatId().equals(repliedMessage.get().getChatId())) {
             return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.BAD_REQUEST);
         }
+        if (messageModel.getForwardedFrom() != null && !userRepository.existsById(messageModel.getForwardedFrom())) {
+            return new ResponseEntity<>(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        }
         Message message = Message.builder()
                 .text(messageModel.getText())
                 .sender(messageModel.getSender())
                 .chatId(messageModel.getChatId())
                 .repliedMessageId(messageModel.getRepliedMessageId())
+                .forwardedFrom(messageModel.getForwardedFrom())
                 .build();
         messageRepository.save(message);
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
@@ -201,7 +205,7 @@ public class ServerController {
     public ResponseEntity<Message> getMessage(@PathVariable Long messageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         Optional<Message> message = messageRepository.findById(messageId);
-        if (user.isEmpty() || message.isEmpty() || !message.get().getSender().equals(user.get().getUsername())) {
+        if (user.isEmpty() || message.isEmpty() || !isInChats(user.get().getUsername(), chatRepository.findById(message.get().getChatId()).get())) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(message.get(), HttpStatus.OK);
