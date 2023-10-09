@@ -29,7 +29,6 @@ public class CommandProcessor {
     private WebClient client;
     private UserModel onlineUsername;
     private Scanner scanner;
-    private final String ANSI_RESET = "\u001B[0m";
 
     public void run() {
         client = WebClient.create();
@@ -140,11 +139,10 @@ public class CommandProcessor {
 
     private void showChatList(List<ChatModel> chats) {
         for (ChatModel chat : chats) {
-            String ANSI_YELLOW = "\u001B[33m";
             if (chat instanceof PvModel pv) {
-                System.out.println(ANSI_YELLOW + "- " + getPeer(pv) + ": " + chat.getId() + ANSI_RESET);
+                Logger.printYellow("- " + getPeer(pv) + ": " + chat.getId());
             } else {
-                System.out.println(ANSI_YELLOW + "- " + ((GroupModel) chat).getName() + "(G): " + chat.getId() + ANSI_RESET);
+                Logger.printYellow("- " + ((GroupModel) chat).getName() + "(G): " + chat.getId());
             }
         }
     }
@@ -202,13 +200,12 @@ public class CommandProcessor {
     }
 
     private void printMessageInChat(MessageModel messageModel) {
-        String ANSI_GREEN = "\u001B[32m";
         if (messageModel.getRepliedMessageId() != 0L) {
-            System.out.println(ANSI_GREEN + messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText() + ANSI_RESET);
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText());
         } else if (messageModel.getForwardedFrom() != null) {
-            System.out.println(ANSI_GREEN + messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " forwarded from " + messageModel.getForwardedFrom() + ": " + messageModel.getText() + ANSI_RESET);
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " forwarded from " + messageModel.getForwardedFrom() + ": " + messageModel.getText());
         } else {
-            System.out.println(ANSI_GREEN + messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText() + ANSI_RESET);
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
         }
     }
 
