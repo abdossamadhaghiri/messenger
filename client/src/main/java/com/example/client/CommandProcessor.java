@@ -140,23 +140,11 @@ public class CommandProcessor {
     private void showChatList(List<ChatModel> chats) {
         for (ChatModel chat : chats) {
             if (chat instanceof PvModel pv) {
-                printYellow("- " + getPeer(pv) + ": " + chat.getId());
+                Logger.printYellow("- " + getPeer(pv) + ": " + chat.getId());
             } else {
-                printYellow("- " + ((GroupModel) chat).getName() + "(G): " + chat.getId());
+                Logger.printYellow("- " + ((GroupModel) chat).getName() + "(G): " + chat.getId());
             }
         }
-    }
-
-    private void printYellow(String text) {
-        String ANSI_YELLOW = "\u001B[33m";
-        String ANSI_RESET = "\u001B[0m";
-        System.out.println(ANSI_YELLOW + text + ANSI_RESET);
-    }
-
-    private void printGreen(String text) {
-        String ANSI_GREEN = "\u001B[32m";
-        String ANSI_RESET = "\u001B[0m";
-        System.out.println(ANSI_GREEN + text + ANSI_RESET);
     }
 
     private String getPeer(PvModel pv) {
@@ -205,9 +193,9 @@ public class CommandProcessor {
 
     private void printMessageInChat(MessageModel messageModel) {
         if (messageModel.getRepliedMessageId() == 0L) {
-            printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + ": " + messageModel.getText());
         } else {
-            printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText());
+            Logger.printGreen(messageModel.getId() + ". " + recognizeSender(messageModel.getSender()) + " in reply to " + messageModel.getRepliedMessageId() + ": " + messageModel.getText());
         }
     }
 
