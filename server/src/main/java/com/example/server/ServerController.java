@@ -78,7 +78,7 @@ public class ServerController {
             return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
         }
         List<MessageModel> messageModels = new ArrayList<>();
-        messageRepository.findMessagesByChatId(chatId).forEach(message -> messageModels.add(message.createMessageModel()));
+        messageRepository.findMessagesByChatId(chatId).forEach(message -> messageModels.add(message.toMessageModel()));
         return new ResponseEntity<>(messageModels, HttpStatus.OK);
     }
 

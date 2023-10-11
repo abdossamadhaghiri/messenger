@@ -516,7 +516,7 @@ class ServerControllerTest {
     void testGetMessage_ok() {
         Message message = messageRepository.findAll().get(2);
         User user = userRepository.findById("javad").get();
-        MessageModel expected = message.createMessageModel();
+        MessageModel expected = message.toMessageModel();
         String url = UrlPaths.GET_MESSAGE_API_URL + message.getId();
         client.get()
               .uri(url)
