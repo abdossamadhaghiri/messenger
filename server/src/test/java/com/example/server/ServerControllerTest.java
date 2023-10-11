@@ -119,13 +119,13 @@ class ServerControllerTest {
                 .chatId(chats.get(1).getId())
                 .build();
         client.post()
-              .uri(UrlPaths.NEW_MESSAGE_API_URL)
-              .bodyValue(messageModel)
-              .exchange()
-              .expectStatus()
-              .isBadRequest()
-              .expectBody(String.class)
-              .isEqualTo(Commands.USERNAME_DOESNT_EXIST);
+                .uri(UrlPaths.NEW_MESSAGE_API_URL)
+                .bodyValue(messageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.USERNAME_DOESNT_EXIST);
     }
 
     @Test
@@ -137,13 +137,13 @@ class ServerControllerTest {
                 .chatId(chats.get(2).getId() + 1)
                 .build();
         client.post()
-              .uri(UrlPaths.NEW_MESSAGE_API_URL)
-              .bodyValue(messageModel)
-              .exchange()
-              .expectStatus()
-              .isBadRequest()
-              .expectBody(String.class)
-              .isEqualTo(Commands.CHAT_DOESNT_EXIST);
+                .uri(UrlPaths.NEW_MESSAGE_API_URL)
+                .bodyValue(messageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.CHAT_DOESNT_EXIST);
     }
 
     @Test
@@ -155,13 +155,13 @@ class ServerControllerTest {
                 .chatId(chats.get(2).getId())
                 .build();
         client.post()
-              .uri(UrlPaths.NEW_MESSAGE_API_URL)
-              .bodyValue(messageModel)
-              .exchange()
-              .expectStatus()
-              .isBadRequest()
-              .expectBody(String.class)
-              .isEqualTo(Commands.CHAT_IS_NOT_YOUR_CHAT);
+                .uri(UrlPaths.NEW_MESSAGE_API_URL)
+                .bodyValue(messageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.CHAT_IS_NOT_YOUR_CHAT);
     }
 
     @Test
@@ -203,6 +203,7 @@ class ServerControllerTest {
                 .expectBody(String.class)
                 .isEqualTo(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT);
     }
+
     @Test
     void newMessage_forwardedFromUsernameDoesntExist() {
         List<Chat> chats = chatRepository.findAll();
@@ -213,13 +214,13 @@ class ServerControllerTest {
                 .forwardedFrom("alireza")
                 .build();
         client.post()
-              .uri(UrlPaths.NEW_MESSAGE_API_URL)
-              .bodyValue(messageModel)
-              .exchange()
-              .expectStatus()
-              .isBadRequest()
-              .expectBody(String.class)
-              .isEqualTo(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST);
+                .uri(UrlPaths.NEW_MESSAGE_API_URL)
+                .bodyValue(messageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST);
     }
 
     @Test
