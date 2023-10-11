@@ -26,7 +26,7 @@ public class Pv extends Chat {
     }
 
     @Override
-    public ChatModel createChatModel() {
+    public ChatModel toChatModel() {
         return new PvModel(this.getId(), this.first, this.second);
     }
 }
