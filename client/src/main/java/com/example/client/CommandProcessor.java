@@ -401,26 +401,26 @@ public class CommandProcessor {
         }
         System.out.println("1. select chat\n2. enter a new username");
         String option = scanner.nextLine();
-        if (option.equals("1")) {
-            System.out.println("enter your chat id:");
-            String input = scanner.nextLine();
-            if (!isNumeric(input)) {
-                System.out.println(Commands.INVALID_CHAT_ID);
-                return;
+        switch (option) {
+            case "1" -> {
+                System.out.println("enter your chat id:");
+                String input = scanner.nextLine();
+                if (isNumeric(input) && canEnterOldChat(Long.valueOf(input))) {
+                    Long destinationChatId = Long.valueOf(input);
+                    System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+                } else {
+                    System.out.println(Commands.INVALID_CHAT_ID);
+                }
             }
-            Long destinationChatId = Long.valueOf(input);
-            if (canEnterOldChat(destinationChatId)) {
-                System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+            case "2" -> {
+                System.out.println("enter the username:");
+                String username = scanner.nextLine();
+                if (canStartNewChat(username)) {
+                    Long destinationChatId = getChatId(username);
+                    System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+                }
             }
-        } else if (option.equals("2")) {
-            System.out.println("enter the username:");
-            String username = scanner.nextLine();
-            if (canStartNewChat(username)) {
-                Long destinationChatId = getChatId(username);
-                System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
-            }
-        } else {
-            System.out.println(Commands.INVALID_COMMAND);
+            default -> System.out.println(Commands.INVALID_COMMAND);
         }
     }
 
