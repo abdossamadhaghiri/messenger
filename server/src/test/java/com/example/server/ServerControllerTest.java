@@ -235,12 +235,7 @@ class ServerControllerTest {
                 .build();
         String url = UrlPaths.NEW_MESSAGE_API_URL;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.builder()
-                .id(messageModel.getId())
-                .text(messageModel.getText())
-                .sender(messageModel.getSender())
-                .chatId(messageModel.getChatId())
-                .build();
+        Message message = Message.fromMessageModel(messageModel);
         assertThat(message).isIn(messageRepository.findAll());
     }
 
@@ -256,13 +251,7 @@ class ServerControllerTest {
                 .repliedMessageId(messages.get(1).getId())
                 .build();
         client.post().uri(UrlPaths.NEW_MESSAGE_API_URL).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.builder()
-                .id(messageModel.getId())
-                .text(messageModel.getText())
-                .sender(messageModel.getSender())
-                .chatId(messageModel.getChatId())
-                .repliedMessageId(messageModel.getRepliedMessageId())
-                .build();
+        Message message = Message.fromMessageModel(messageModel);
         assertThat(message).isIn(messageRepository.findAll());
     }
 
@@ -278,13 +267,7 @@ class ServerControllerTest {
                 .forwardedFrom("javad")
                 .build();
         client.post().uri(UrlPaths.NEW_MESSAGE_API_URL).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.builder()
-                .id(messageModel.getId())
-                .text(messageModel.getText())
-                .sender(messageModel.getSender())
-                .chatId(messageModel.getChatId())
-                .forwardedFrom(messageModel.getForwardedFrom())
-                .build();
+        Message message = Message.fromMessageModel(messageModel);
         assertThat(message).isIn(messageRepository.findAll());
     }
 
@@ -301,14 +284,7 @@ class ServerControllerTest {
                 .forwardedFrom("javad")
                 .build();
         client.post().uri(UrlPaths.NEW_MESSAGE_API_URL).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.builder()
-                .id(messageModel.getId())
-                .text(messageModel.getText())
-                .sender(messageModel.getSender())
-                .chatId(messageModel.getChatId())
-                .repliedMessageId(messageModel.getRepliedMessageId())
-                .forwardedFrom(messageModel.getForwardedFrom())
-                .build();
+        Message message = Message.fromMessageModel(messageModel);
         assertThat(message).isIn(messageRepository.findAll());
     }
 

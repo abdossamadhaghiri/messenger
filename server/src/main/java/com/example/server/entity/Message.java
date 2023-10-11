@@ -45,6 +45,17 @@ public class Message {
 
     }
 
+    public static Message fromMessageModel(MessageModel messageModel) {
+        return Message.builder()
+                .id(messageModel.getId())
+                .text(messageModel.getText())
+                .sender(messageModel.getSender())
+                .chatId(messageModel.getChatId())
+                .repliedMessageId(messageModel.getRepliedMessageId())
+                .forwardedFrom(messageModel.getForwardedFrom())
+                .build();
+    }
+
 }
 
 
