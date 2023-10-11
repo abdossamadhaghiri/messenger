@@ -33,7 +33,7 @@ public class Message {
 
     private String forwardedFrom;
 
-    public MessageModel createMessageModel() {
+    public MessageModel toMessageModel() {
         return MessageModel.builder()
                 .id(id)
                 .text(text)
