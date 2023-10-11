@@ -31,7 +31,7 @@ public class Group extends Chat {
     }
 
     @Override
-    public ChatModel createChatModel() {
+    public ChatModel toChatModel() {
         return new GroupModel(this.getId(), this.owner, this.members, this.name);
     }
 }

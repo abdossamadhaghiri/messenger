@@ -66,7 +66,7 @@ public class ServerController {
         List<ChatModel> chatModels = new ArrayList<>();
         for (Chat chat : chatRepository.findAll()) {
             if (isInChats(username, chat)) {
-                chatModels.add(chat.createChatModel());
+                chatModels.add(chat.toChatModel());
             }
         }
         return new ResponseEntity<>(chatModels, HttpStatus.OK);

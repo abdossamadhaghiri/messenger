@@ -17,7 +17,7 @@ public abstract class Chat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    public abstract ChatModel createChatModel();
+    public abstract ChatModel toChatModel();
 
 
 
