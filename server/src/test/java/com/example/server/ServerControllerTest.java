@@ -42,10 +42,15 @@ class ServerControllerTest {
     @Autowired
     private ChatRepository chatRepository;
 
+    private List<Chat> chats;
+    private List<Message> messages;
+
     @BeforeEach
     public void setUpTestDatabase() {
         clearDatabase();
         createTestDatabase();
+        chats = chatRepository.findAll();
+        messages = messageRepository.findAll();
     }
 
     private void clearDatabase() {
@@ -112,7 +117,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_invalidSender() {
-        List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("alireza")
@@ -130,7 +134,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_chatDoesntExists() {
-        List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
@@ -148,7 +151,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_chatIsNotInSendersChat() {
-        List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
@@ -166,8 +168,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_repliedMessageDoesntExists() {
-        List<Chat> chats = chatRepository.findAll();
-        List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
@@ -186,8 +186,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_repliedMessageIsNotInThisChat() {
-        List<Chat> chats = chatRepository.findAll();
-        List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
@@ -206,7 +204,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_forwardedFromUsernameDoesntExist() {
-        List<Chat> chats = chatRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
@@ -225,8 +222,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_ok_notReply_notForward() {
-        List<Chat> chats = chatRepository.findAll();
-        List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
@@ -241,8 +236,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_ok_reply_notForward() {
-        List<Chat> chats = chatRepository.findAll();
-        List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
@@ -257,8 +250,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_ok_notReply_forward() {
-        List<Chat> chats = chatRepository.findAll();
-        List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
@@ -273,8 +264,6 @@ class ServerControllerTest {
 
     @Test
     void newMessage_ok_reply_forward() {
-        List<Chat> chats = chatRepository.findAll();
-        List<Message> messages = messageRepository.findAll();
         MessageModel messageModel = MessageModel.builder()
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
@@ -314,7 +303,7 @@ class ServerControllerTest {
 
     @Test
     void testNewPv_ok() {
-        PvModel pvModel = new PvModel(chatRepository.findAll().get(2).getId() + 1, "ali", "amir");
+        PvModel pvModel = new PvModel(chats.get(2).getId() + 1, "ali", "amir");
         String url = UrlPaths.NEW_PV_API_URL;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
         Pv pv = new Pv(pvModel.getId(), pvModel.getFirst(), pvModel.getSecond());
@@ -331,7 +320,7 @@ class ServerControllerTest {
 
     @Test
     void testNewGroup_ok() {
-        GroupModel groupModel = new GroupModel(chatRepository.findAll().get(2).getId() + 1, "ali",
+        GroupModel groupModel = new GroupModel(chats.get(2).getId() + 1, "ali",
                 new ArrayList<>(List.of("ali", "reza", "javad")), "groupName");
         String url = UrlPaths.NEW_GROUP_API_URL;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
@@ -341,7 +330,7 @@ class ServerControllerTest {
 
     @Test
     void testDeleteMessage_invalidToken() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         String url = UrlPaths.DELETE_MESSAGE_API_URL + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.INVALID_TOKEN, result.getResponseBody()));
@@ -349,7 +338,7 @@ class ServerControllerTest {
 
     @Test
     void testDeleteMessage_messageDoesntExists() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.DELETE_MESSAGE_API_URL + (message.getId() + 1);
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest()
@@ -358,8 +347,8 @@ class ServerControllerTest {
 
     @Test
     void testDeleteMessage_messageDoesntYourMessage() {
-        Message message = messageRepository.findAll().get(2);
-        User user = userRepository.findById(messageRepository.findAll().get(1).getSender()).get();
+        Message message = messages.get(2);
+        User user = userRepository.findById(messages.get(1).getSender()).get();
         String url = UrlPaths.DELETE_MESSAGE_API_URL + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
@@ -367,7 +356,7 @@ class ServerControllerTest {
 
     @Test
     void testDeleteMessage_ok() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.DELETE_MESSAGE_API_URL + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk();
@@ -376,7 +365,7 @@ class ServerControllerTest {
 
     @Test
     void editMessage_invalidToken() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         MessageModel messageModel = MessageModel.builder()
                                                 .id(message.getId())
                                                 .text("edited text!")
@@ -397,7 +386,7 @@ class ServerControllerTest {
 
     @Test
     void editMessage_messageDoesntExists() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
         MessageModel messageModel = MessageModel.builder()
                                                 .id(message.getId())
@@ -419,14 +408,14 @@ class ServerControllerTest {
 
     @Test
     void editMessage_messageDoesntYourMessage() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         MessageModel messageModel = MessageModel.builder()
                                                 .id(message.getId())
                                                 .text("edited text!")
                                                 .sender(message.getSender())
                                                 .chatId(message.getChatId())
                                                 .build();
-        User user = userRepository.findById(messageRepository.findAll().get(1).getSender()).get();
+        User user = userRepository.findById(messages.get(1).getSender()).get();
         String url = UrlPaths.EDIT_MESSAGE_API_URL + message.getId();
         client.put()
               .uri(url)
@@ -441,7 +430,7 @@ class ServerControllerTest {
 
     @Test
     void editMessage_ok() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         MessageModel messageModel = MessageModel.builder()
                                                 .id(message.getId())
                                                 .text("edited text!")
@@ -462,14 +451,14 @@ class ServerControllerTest {
 
     @Test
     void testGetMessage_invalidToken() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         String url = UrlPaths.GET_MESSAGE_API_URL + message.getId();
         client.get().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest();
     }
 
     @Test
     void testGetMessage_messageDoesntExists() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.GET_MESSAGE_API_URL + (message.getId() + 1);
         client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest();
@@ -477,7 +466,7 @@ class ServerControllerTest {
 
     @Test
     void getMessage_messageIsNotInYourChats() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         User user = userRepository.findById("ali").get();
         String url = UrlPaths.GET_MESSAGE_API_URL + message.getId();
         client.get()
@@ -490,7 +479,7 @@ class ServerControllerTest {
 
     @Test
     void testGetMessage_ok() {
-        Message message = messageRepository.findAll().get(2);
+        Message message = messages.get(2);
         User user = userRepository.findById("javad").get();
         MessageModel expected = message.toMessageModel();
         String url = UrlPaths.GET_MESSAGE_API_URL + message.getId();
