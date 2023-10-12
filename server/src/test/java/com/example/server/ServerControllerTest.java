@@ -85,7 +85,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void testSignUp_newUsername() {
+    void newUser_newUsername() {
         String URL = UrlPaths.USERS_URL_PATH;
         String newUsername = "amin";
         client.post().uri(URL).bodyValue(newUsername).exchange().expectStatus().isOk();
@@ -93,7 +93,7 @@ class ServerControllerTest {
     }
 
     @Test
-    void testSignUp_duplicateUsername() {
+    void newUser_duplicateUsername() {
         userRepository.save(new User("amin", ServerController.generateToken(), new ArrayList<>()));
         String url = UrlPaths.USERS_URL_PATH;
         String duplicateUsername = "amin";
@@ -101,14 +101,14 @@ class ServerControllerTest {
     }
 
     @Test
-    void testSignIn_newUsername() {
+    void getUser_newUsername() {
         String newUsername = "alireza";
         String url = UrlPaths.USERS_URL_PATH + "/" + newUsername;
         client.get().uri(url).exchange().expectStatus().isBadRequest();
     }
 
     @Test
-    void testSignIn_duplicateUsername() {
+    void getUser_duplicateUsername() {
         userRepository.save(new User("alireza", ServerController.generateToken(), new ArrayList<>()));
         String duplicateUsername = "alireza";
         String url = UrlPaths.USERS_URL_PATH + "/" + duplicateUsername;
