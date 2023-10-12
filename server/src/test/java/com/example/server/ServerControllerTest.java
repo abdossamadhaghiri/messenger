@@ -318,7 +318,7 @@ class ServerControllerTest {
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
-        Pv pv = new Pv(pvModel.getId(), pvModel.getFirst(), pvModel.getSecond(), new ArrayList<>());
+        Pv pv = Pv.fromPvModel(pvModel);
         assertThat(pv).isIn(chatRepository.findAll());
     }
 
@@ -346,7 +346,7 @@ class ServerControllerTest {
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
-        Group group = new Group(groupModel.getId(), groupModel.getOwner(), groupModel.getMembers(), groupModel.getName(), new ArrayList<>());
+        Group group = Group.fromGroupModel(groupModel);
         assertThat(group).isIn(chatRepository.findAll());
     }
 
