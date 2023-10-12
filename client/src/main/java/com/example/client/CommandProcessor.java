@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -290,7 +291,7 @@ public class CommandProcessor {
             if (option.equals("1")) {
                 System.out.println("enter the username:");
                 String username = scanner.nextLine();
-                String url = apiAddresses.getUsersApiUrl() + "/" + username;
+                String url = apiAddresses.getUsersApiUrl() + File.separator + username;
                 ResponseEntity<String> response = client.get()
                         .uri(url)
                         .retrieve()
@@ -334,7 +335,7 @@ public class CommandProcessor {
         if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUser.getUsername())) {
             return Commands.INVALID_MESSAGE_ID;
         }
-        String url = apiAddresses.getMessagesApiUrl() + "/" + messageId;
+        String url = apiAddresses.getMessagesApiUrl() + File.separator + messageId;
         ResponseEntity<String> response = client.delete()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
@@ -356,7 +357,7 @@ public class CommandProcessor {
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
         MessageModel newMessageModel = messageModel.toBuilder().text(newText).build();
-        String url = apiAddresses.getMessagesApiUrl() + "/" + messageId;
+        String url = apiAddresses.getMessagesApiUrl() + File.separator + messageId;
         ResponseEntity<String> response = client.put()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken()).bodyValue(newMessageModel)
@@ -402,7 +403,7 @@ public class CommandProcessor {
     }
 
     private MessageModel getMessage(Long messageId) {
-        String url = apiAddresses.getMessagesApiUrl() + "/" + messageId;
+        String url = apiAddresses.getMessagesApiUrl() + File.separator + messageId;
         ResponseEntity<MessageModel> response = client.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
@@ -418,7 +419,7 @@ public class CommandProcessor {
     }
 
     private UserModel getUser(String username) {
-        String url = apiAddresses.getUsersApiUrl() + "/" + username;
+        String url = apiAddresses.getUsersApiUrl() + File.separator + username;
         ResponseEntity<UserModel> response = client.get()
                 .uri(url)
                 .retrieve()
@@ -433,7 +434,7 @@ public class CommandProcessor {
     }
 
     private ChatModel getChat(Long chatId) {
-        String url = apiAddresses.getChatsApiUrl() + "/" + chatId;
+        String url = apiAddresses.getChatsApiUrl() + File.separator + chatId;
         ResponseEntity<ChatModel> response = client.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
