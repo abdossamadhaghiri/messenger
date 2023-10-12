@@ -3,7 +3,9 @@ package org.example.model;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
@@ -13,6 +15,8 @@ import java.util.List;
         @JsonSubTypes.Type(value = GroupModel.class, name = "groupModel")
 })
 @Getter
+@SuperBuilder
+@NoArgsConstructor
 public abstract class ChatModel {
 
     private @Setter Long id;

@@ -1,20 +1,15 @@
 package org.example.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
+@SuperBuilder
 public class PvModel extends ChatModel {
 
     private String first;
     private String second;
 
-    public PvModel(Long id, String first, String second) {
-        this.setId(id);
-        this.first = first;
-        this.second = second;
-    }
 }

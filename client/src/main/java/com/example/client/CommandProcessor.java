@@ -205,22 +205,12 @@ public class CommandProcessor {
         return onlineUser.getChats().stream().anyMatch(chat -> chat.getId().equals(chatId));
     }
 
-    private ResponseEntity<List<MessageModel>> getMessagesInOldChat(Long chatId) {
-        String url = apiAddresses.getMessagesApiUrl() + "/" + onlineUser.getUsername() + "/" + chatId;
-        return client.get()
-                .uri(url)
-                .retrieve()
-                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                .toEntity(new ParameterizedTypeReference<List<MessageModel>>() {
-                }).block();
-    }
-
     private boolean canStartNewChat(String username) {
         String url = apiAddresses.getChatsApiUrl();
-        PvModel pv = new PvModel(onlineUser.getUsername(), username);
+        PvModel pvModel = PvModel.builder().first(onlineUser.getUsername()).second(username).build();
         ResponseEntity<String> response = client.post()
                 .uri(url)
-                .bodyValue(pv)
+                .bodyValue(pvModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -325,7 +315,7 @@ public class CommandProcessor {
         }
         members.add(onlineUser.getUsername());
         String url = apiAddresses.getChatsApiUrl();
-        GroupModel group = new GroupModel(onlineUser.getUsername(), members, name);
+        GroupModel group = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
         ResponseEntity<String> response = client.post()
                 .uri(url)
                 .bodyValue(group)
