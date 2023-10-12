@@ -108,10 +108,6 @@ public class ServerController {
         return new ResponseEntity<>(chat.get().toChatModel(), HttpStatus.OK);
     }
 
-    private boolean isInChats(String myUsername, Chat chat) {
-        return userRepository.findById(myUsername).get().getChats().contains(chat);
-    }
-
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
         for (Chat chat : chatRepository.findAll()) {
             if (chat instanceof Pv pv &&
@@ -125,14 +121,15 @@ public class ServerController {
 
     @PostMapping("/messages")
     public ResponseEntity<String> newMessage(@RequestBody MessageModel messageModel) {
-        if (!userRepository.existsById(messageModel.getSender())) {
+        Optional<User> sender = userRepository.findById(messageModel.getSender());
+        if (sender.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
         Optional<Chat> chat = chatRepository.findById(messageModel.getChatId());
         if (chat.isEmpty()) {
             return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
-        if (!isInChats(messageModel.getSender(), chat.get())) {
+        if (!sender.get().getChats().contains(chat.get())) {
             return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.BAD_REQUEST);
         }
         Optional<Message> repliedMessage = messageRepository.findById(messageModel.getRepliedMessageId());
@@ -198,7 +195,8 @@ public class ServerController {
     public ResponseEntity<Message> getMessage(@PathVariable Long messageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         Optional<Message> message = messageRepository.findById(messageId);
-        if (user.isEmpty() || message.isEmpty() || !isInChats(user.get().getUsername(), chatRepository.findById(message.get().getChatId()).get())) {
+
+        if (user.isEmpty() || message.isEmpty() || !user.get().getChats().contains(chatRepository.findById(message.get().getChatId()).get())) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(message.get(), HttpStatus.OK);
