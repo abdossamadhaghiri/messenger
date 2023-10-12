@@ -20,7 +20,7 @@ public class User {
     private String username;
     private String token;
 
-    public UserModel createUserModel() {
+    public UserModel toUserModel() {
         return new UserModel(this.username, this.token);
     }
 
