@@ -58,30 +58,6 @@ public class ServerController {
         return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
     }
 
-    @GetMapping("/chats/{username}")
-    public ResponseEntity<List<ChatModel>> getChats(@PathVariable String username) {
-        if (!userRepository.existsById(username)) {
-            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
-        }
-        List<ChatModel> chatModels = new ArrayList<>();
-        for (Chat chat : chatRepository.findAll()) {
-            if (isInChats(username, chat)) {
-                chatModels.add(chat.toChatModel());
-            }
-        }
-        return new ResponseEntity<>(chatModels, HttpStatus.OK);
-    }
-
-    @GetMapping("/messages/{username}/{chatId}")
-    public ResponseEntity<List<MessageModel>> getMessagesInOldChat(@PathVariable String username, @PathVariable Long chatId) {
-        if (!userRepository.existsById(username) || chatRepository.findById(chatId).isEmpty() || !isInChats(username, chatRepository.findById(chatId).get())) {
-            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
-        }
-        List<MessageModel> messageModels = new ArrayList<>();
-        messageRepository.findMessagesByChatId(chatId).forEach(message -> messageModels.add(message.toMessageModel()));
-        return new ResponseEntity<>(messageModels, HttpStatus.OK);
-    }
-
     @PostMapping("/chats")
     public ResponseEntity<String> newChat(@RequestBody ChatModel chatModel) {
         if (chatModel instanceof PvModel pvModel) {
@@ -120,6 +96,16 @@ public class ServerController {
             userRepository.save(user);
         }
         return new ResponseEntity<>(Commands.GROUP_SUCCESSFULLY_CREATED, HttpStatus.OK);
+    }
+
+    @GetMapping("/chats/{chatId}")
+    public ResponseEntity<ChatModel> getChat(@PathVariable Long chatId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        Optional<Chat> chat = chatRepository.findById(chatId);
+        if (user.isEmpty() || chat.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(chat.get().toChatModel(), HttpStatus.OK);
     }
 
     private boolean isInChats(String myUsername, Chat chat) {

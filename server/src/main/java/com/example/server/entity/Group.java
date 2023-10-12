@@ -34,4 +34,15 @@ public class Group extends Chat {
     public ChatModel toChatModel() {
         return new GroupModel(this.getId(), this.owner, this.members, this.name);
     }
+
+    @Override
+    public String toString() {
+        return "Group{" +
+                "id=" + getId() +
+                ", owner='" + owner + '\'' +
+                ", members=" + members +
+                ", name='" + name + '\'' +
+                "messages= " + getMessages() +
+                '}';
+    }
 }

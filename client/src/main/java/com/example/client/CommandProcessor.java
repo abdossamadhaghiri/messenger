@@ -140,8 +140,12 @@ public class CommandProcessor {
     private void chat(Long chatId) {
         boolean flag = true;
         while (flag) {
-            getMessagesInOldChat(chatId).getBody().forEach(this::printMessageInChat);
-
+            ChatModel chat = getChat(chatId);
+            if (chat == null) {
+                System.out.println(Commands.PLEASE_TRY_AGAIN);
+                break;
+            }
+            chat.getMessages().forEach(this::printMessageInChat);
             System.out.println("1. send message\n2. delete message\n3. edit message\n4. forward message\n5. back");
             String option = scanner.nextLine();
             switch (option) {
@@ -430,6 +434,22 @@ public class CommandProcessor {
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(UserModel.class)
+                .block();
+        if (response == null) {
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
+            return null;
+        }
+        return response.getBody();
+    }
+
+    private ChatModel getChat(Long chatId) {
+        String url = apiAddresses.getChatsApiUrl() + "/" + chatId;
+        ResponseEntity<ChatModel> response = client.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(ChatModel.class)
                 .block();
         if (response == null) {
             System.out.println(Commands.PLEASE_TRY_AGAIN);
