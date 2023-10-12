@@ -55,7 +55,7 @@ public class ServerController {
     @GetMapping("signIn/{username}")
     public ResponseEntity<UserModel> signIn(@PathVariable String username) {
         Optional<User> user = userRepository.findById(username);
-        return user.map(value -> new ResponseEntity<>(value.createUserModel(), HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
+        return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
     }
 
     @GetMapping("/chats/{username}")
