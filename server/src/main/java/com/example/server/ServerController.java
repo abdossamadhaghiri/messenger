@@ -153,6 +153,8 @@ public class ServerController {
                 .forwardedFrom(messageModel.getForwardedFrom())
                 .build();
         messageRepository.save(message);
+        chat.get().getMessages().add(message);
+        chatRepository.save(chat.get());
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }
 

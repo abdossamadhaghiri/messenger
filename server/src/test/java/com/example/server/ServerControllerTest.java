@@ -68,12 +68,13 @@ class ServerControllerTest {
         Message message1 = Message.builder().id(1L).text("aaa").sender("ali").chatId(chats.get(0).getId()).build();
         Message message2 = Message.builder().id(2L).text("bbb").sender("ali").chatId(chats.get(1).getId()).build();
         Message message3 = Message.builder().id(3L).text("ccc").sender("reza").chatId(chats.get(2).getId()).build();
-        messageRepository.saveAll(List.of(message1, message2, message3));
-
 
         Chat aliRezaChat = chats.get(0);
         Chat aliJavadChat = chats.get(1);
         Chat rezaJavadChat = chats.get(2);
+        aliRezaChat.getMessages().add(message1);
+        aliJavadChat.getMessages().add(message2);
+        rezaJavadChat.getMessages().add(message3);
         chatRepository.saveAll(List.of(aliRezaChat, aliJavadChat, rezaJavadChat));
 
         User ali = new User("ali", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, aliJavadChat)));
@@ -230,7 +231,7 @@ class ServerControllerTest {
         String url = UrlPaths.MESSAGES_URL_PATH;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -244,7 +245,7 @@ class ServerControllerTest {
                 .build();
         client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -258,7 +259,7 @@ class ServerControllerTest {
                 .build();
         client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -273,7 +274,7 @@ class ServerControllerTest {
                 .build();
         client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -319,7 +320,8 @@ class ServerControllerTest {
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
         Pv pv = Pv.fromPvModel(pvModel);
-        assertThat(pv).isIn(chatRepository.findAll());
+        assertThat(pv).isIn(chatRepository.findAll()).isIn(userRepository.findById(pv.getFirst()).get().getChats())
+                .isIn(userRepository.findById(pv.getSecond()).get().getChats());
     }
 
     @Test
@@ -348,6 +350,7 @@ class ServerControllerTest {
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
         Group group = Group.fromGroupModel(groupModel);
         assertThat(group).isIn(chatRepository.findAll());
+        group.getMembers().forEach(member -> assertThat(group).isIn(userRepository.findById(member).get().getChats()));
     }
 
     @Test
@@ -382,7 +385,7 @@ class ServerControllerTest {
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk();
-        assertThat(messageRepository.findById(message.getId())).isEmpty();
+        assertThat(message).isNotIn(messageRepository.findAll()).isNotIn(chatRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test

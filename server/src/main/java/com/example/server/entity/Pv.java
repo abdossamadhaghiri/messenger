@@ -7,7 +7,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.example.model.ChatModel;
-import org.example.model.GroupModel;
 import org.example.model.MessageModel;
 import org.example.model.PvModel;
 
@@ -23,7 +22,6 @@ import java.util.List;
 public class Pv extends Chat {
 
     private String first;
-
     private String second;
 
     @Override
