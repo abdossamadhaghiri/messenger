@@ -286,8 +286,7 @@ class ServerControllerTest {
                 .second("ali")
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest();
     }
 
     @Test
@@ -297,8 +296,7 @@ class ServerControllerTest {
                 .second("alireza")
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest();
     }
 
     @Test
@@ -307,8 +305,7 @@ class ServerControllerTest {
                 .first("ali")
                 .second("reza")
                 .build();        String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.CHAT_ALREADY_EXISTS, result.getResponseBody()));
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest();
     }
 
     @Test
@@ -335,8 +332,7 @@ class ServerControllerTest {
                 .messages(new ArrayList<>())
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.INVALID_GROUP_CONTENT, result.getResponseBody()));
+        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest();
     }
 
     @Test

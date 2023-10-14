@@ -59,43 +59,45 @@ public class ServerController {
     }
 
     @PostMapping("/chats")
-    public ResponseEntity<String> newChat(@RequestBody ChatModel chatModel) {
+    public ResponseEntity<ChatModel> newChat(@RequestBody ChatModel chatModel) {
         if (chatModel instanceof PvModel pvModel) {
             return newPv(pvModel);
         }
         return newGroup(((GroupModel) chatModel));
     }
 
-    private ResponseEntity<String> newPv(PvModel pvModel) {
+    private ResponseEntity<ChatModel> newPv(PvModel pvModel) {
         Optional<User> firstUser = userRepository.findById(pvModel.getFirst());
         Optional<User> secondUser = userRepository.findById(pvModel.getSecond());
-        if (firstUser.isEmpty() || secondUser.isEmpty()) {
-            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        if (firstUser.isEmpty() || secondUser.isEmpty() || getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-        if (getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
-            return new ResponseEntity<>(Commands.CHAT_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
-        }
-        Pv pv = new Pv(pvModel.getFirst(), pvModel.getSecond());
+        Pv pv = Pv.builder().first(pvModel.getFirst()).second(pvModel.getSecond()).messages(new ArrayList<>()).build();
         chatRepository.save(pv);
         firstUser.get().getChats().add(pv);
         secondUser.get().getChats().add(pv);
         userRepository.save(firstUser.get());
         userRepository.save(secondUser.get());
-        return new ResponseEntity<>(Commands.START_YOUR_CHAT, HttpStatus.OK);
+        return new ResponseEntity<>(pv.toChatModel(), HttpStatus.OK);
     }
 
-    private ResponseEntity<String> newGroup(GroupModel groupModel) {
+    private ResponseEntity<ChatModel> newGroup(GroupModel groupModel) {
         if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
-            return new ResponseEntity<>(Commands.INVALID_GROUP_CONTENT, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-        Group group = new Group(groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
+        Group group = Group.builder()
+                .owner(groupModel.getOwner())
+                .members(groupModel.getMembers())
+                .name(groupModel.getName())
+                .messages(new ArrayList<>())
+                .build();
         chatRepository.save(group);
         for (String member : group.getMembers()) {
             User user = userRepository.findById(member).get();
             user.getChats().add(group);
             userRepository.save(user);
         }
-        return new ResponseEntity<>(Commands.GROUP_SUCCESSFULLY_CREATED, HttpStatus.OK);
+        return new ResponseEntity<>(group.toChatModel(), HttpStatus.OK);
     }
 
     @GetMapping("/chats/{chatId}")
