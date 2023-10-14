@@ -284,27 +284,29 @@ public class CommandProcessor {
         System.out.println("enter name of your group:");
         String name = scanner.nextLine();
         List<String> members = new ArrayList<>();
+        members.add(onlineUser.getUsername());
         boolean flag = true;
         while (flag) {
             System.out.println("1. add member\n2. create");
             String option = scanner.nextLine();
-            if (option.equals("1")) {
-                System.out.println("enter the username:");
-                String username = scanner.nextLine();
-                UserModel userModel = getUser(username);
-                if (userModel != null) {
-                    System.out.println(username + " successfully added.");
-                    members.add(username);
-                } else {
-                    System.out.println(Commands.USERNAME_DOESNT_EXIST);
+            switch (option) {
+                case "1" -> {
+                    System.out.println("enter the username:");
+                    String username = scanner.nextLine();
+                    UserModel userModel = getUser(username);
+                    if (userModel == null) {
+                        System.out.println(Commands.USERNAME_DOESNT_EXIST);
+                    } else if (members.contains(username)) {
+                        System.out.println("already joined!");
+                    } else {
+                        System.out.println(username + " successfully added.");
+                        members.add(username);
+                    }
                 }
-            } else if (option.equals("2")) {
-                flag = false;
-            } else {
-                System.out.println(Commands.INVALID_COMMAND);
+                case "2" -> flag = false;
+                default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
-        members.add(onlineUser.getUsername());
         String url = apiAddresses.getChatsApiUrl();
         GroupModel group = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
         ResponseEntity<GroupModel> response = client.post()
