@@ -1,15 +1,14 @@
 package com.example.server;
 
 import com.example.server.entity.Message;
-import com.example.server.entity.Chat;
 import com.example.server.entity.Pv;
 import com.example.server.entity.Group;
 import com.example.server.entity.User;
+import com.example.server.repository.GroupRepository;
 import com.example.server.repository.MessageRepository;
-import com.example.server.repository.ChatRepository;
+import com.example.server.repository.PvRepository;
 import com.example.server.repository.UserRepository;
 import org.example.UrlPaths;
-import org.example.model.ChatModel;
 import org.example.model.GroupModel;
 import org.example.model.MessageModel;
 import org.example.model.PvModel;
@@ -41,48 +40,54 @@ class ServerControllerTest {
     private MessageRepository messageRepository;
 
     @Autowired
-    private ChatRepository chatRepository;
+    private PvRepository pvRepository;
 
-    private List<Chat> chats;
+    @Autowired
+    private GroupRepository groupRepository;
+
+    private List<Pv> pvs;
+    private List<Group> groups;
     private List<Message> messages;
 
     @BeforeEach
     public void setUpTestDatabase() {
         clearDatabase();
         createTestDatabase();
-        chats = chatRepository.findAll();
+        pvs = pvRepository.findAll();
+        groups = groupRepository.findAll();
         messages = messageRepository.findAll();
     }
 
     private void clearDatabase() {
         messageRepository.deleteAll();
         userRepository.deleteAll();
-        chatRepository.deleteAll();
+        pvRepository.deleteAll();
+        groupRepository.deleteAll();
     }
 
     private void createTestDatabase() {
-        Chat pv1 = new Pv("ali", "reza");
-        Chat pv2 = new Pv("ali", "javad");
-        Chat pv3 = new Pv("reza", "javad");
-        chatRepository.saveAll(List.of(pv1, pv2, pv3));
-        List<Chat> chats = chatRepository.findAll();
+        Pv pv1 = new Pv("ali", "reza");
+        Pv pv2 = new Pv("ali", "javad");
+        Pv pv3 = new Pv("reza", "javad");
+        pvRepository.saveAll(List.of(pv1, pv2, pv3));
+        pvs = pvRepository.findAll();
 
-        Message message1 = Message.builder().id(1L).text("aaa").sender("ali").chatId(chats.get(0).getId()).build();
-        Message message2 = Message.builder().id(2L).text("bbb").sender("ali").chatId(chats.get(1).getId()).build();
-        Message message3 = Message.builder().id(3L).text("ccc").sender("reza").chatId(chats.get(2).getId()).build();
+        Message message1 = Message.builder().id(1L).text("aaa").sender("ali").chatId(pvs.get(0).getId()).build();
+        Message message2 = Message.builder().id(2L).text("bbb").sender("ali").chatId(pvs.get(1).getId()).build();
+        Message message3 = Message.builder().id(3L).text("ccc").sender("reza").chatId(pvs.get(2).getId()).build();
 
-        Chat aliRezaChat = chats.get(0);
-        Chat aliJavadChat = chats.get(1);
-        Chat rezaJavadChat = chats.get(2);
+        Pv aliRezaChat = pvs.get(0);
+        Pv aliJavadChat = pvs.get(1);
+        Pv rezaJavadChat = pvs.get(2);
         aliRezaChat.getMessages().add(message1);
         aliJavadChat.getMessages().add(message2);
         rezaJavadChat.getMessages().add(message3);
-        chatRepository.saveAll(List.of(aliRezaChat, aliJavadChat, rezaJavadChat));
+        pvRepository.saveAll(List.of(aliRezaChat, aliJavadChat, rezaJavadChat));
 
-        User ali = new User("ali", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, aliJavadChat)));
-        User reza = new User("reza", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, rezaJavadChat)));
-        User javad = new User("javad", ServerController.generateToken(), new ArrayList<>(List.of(aliJavadChat, rezaJavadChat)));
-        User amir = new User("amir", ServerController.generateToken(), new ArrayList<>());
+        User ali = new User("ali", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, aliJavadChat)), new ArrayList<>());
+        User reza = new User("reza", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, rezaJavadChat)), new ArrayList<>());
+        User javad = new User("javad", ServerController.generateToken(), new ArrayList<>(List.of(aliJavadChat, rezaJavadChat)), new ArrayList<>());
+        User amir = new User("amir", ServerController.generateToken(), new ArrayList<>(), new ArrayList<>());
         userRepository.saveAll(List.of(ali, reza, javad, amir));
     }
 
@@ -96,7 +101,7 @@ class ServerControllerTest {
 
     @Test
     void newUser_duplicateUsername() {
-        userRepository.save(new User("amin", ServerController.generateToken(), new ArrayList<>()));
+        userRepository.save(new User("amin", ServerController.generateToken(), new ArrayList<>(), new ArrayList<>()));
         String url = UrlPaths.USERS_URL_PATH;
         String duplicateUsername = "amin";
         client.post().uri(url).bodyValue(duplicateUsername).exchange().expectStatus().isBadRequest();
@@ -111,7 +116,7 @@ class ServerControllerTest {
 
     @Test
     void getUser_duplicateUsername() {
-        userRepository.save(new User("alireza", ServerController.generateToken(), new ArrayList<>()));
+        userRepository.save(new User("alireza", ServerController.generateToken(), new ArrayList<>(), new ArrayList<>()));
         String duplicateUsername = "alireza";
         String url = UrlPaths.USERS_URL_PATH + "/" + duplicateUsername;
         client.get().uri(url).exchange().expectStatus().isOk();
@@ -122,7 +127,7 @@ class ServerControllerTest {
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("alireza")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .build();
         client.post()
                 .uri(UrlPaths.MESSAGES_URL_PATH)
@@ -139,7 +144,7 @@ class ServerControllerTest {
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(2).getId() + 1)
+                .chatId(pvs.get(2).getId() + 1)
                 .build();
         client.post()
                 .uri(UrlPaths.MESSAGES_URL_PATH)
@@ -156,7 +161,7 @@ class ServerControllerTest {
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(2).getId())
+                .chatId(pvs.get(2).getId())
                 .build();
         client.post()
                 .uri(UrlPaths.MESSAGES_URL_PATH)
@@ -173,7 +178,7 @@ class ServerControllerTest {
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .repliedMessageId(messages.get(2).getId() + 1)
                 .build();
         client.post()
@@ -191,7 +196,7 @@ class ServerControllerTest {
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .repliedMessageId(messages.get(2).getId())
                 .build();
         client.post()
@@ -209,7 +214,7 @@ class ServerControllerTest {
         MessageModel messageModel = MessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .forwardedFrom("alireza")
                 .build();
         client.post()
@@ -228,12 +233,12 @@ class ServerControllerTest {
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .build();
         String url = UrlPaths.MESSAGES_URL_PATH;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -242,12 +247,12 @@ class ServerControllerTest {
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .repliedMessageId(messages.get(1).getId())
                 .build();
         client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -256,12 +261,12 @@ class ServerControllerTest {
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .forwardedFrom("javad")
                 .build();
         client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -270,13 +275,13 @@ class ServerControllerTest {
                 .id(messages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(chats.get(1).getId())
+                .chatId(pvs.get(1).getId())
                 .repliedMessageId(messages.get(1).getId())
                 .forwardedFrom("javad")
                 .build();
         client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
         Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(chatRepository.findById(message.getChatId()).get().getMessages());
+        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -285,7 +290,7 @@ class ServerControllerTest {
                 .first("alireza")
                 .second("ali")
                 .build();
-        String url = UrlPaths.CHATS_URL_PATH;
+        String url = UrlPaths.PVS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest();
     }
 
@@ -295,7 +300,7 @@ class ServerControllerTest {
                 .first("ali")
                 .second("alireza")
                 .build();
-        String url = UrlPaths.CHATS_URL_PATH;
+        String url = UrlPaths.PVS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest();
     }
 
@@ -304,23 +309,24 @@ class ServerControllerTest {
         PvModel pvModel = PvModel.builder()
                 .first("ali")
                 .second("reza")
-                .build();        String url = UrlPaths.CHATS_URL_PATH;
+                .build();
+        String url = UrlPaths.PVS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest();
     }
 
     @Test
     void testNewPv_ok() {
         PvModel pvModel = PvModel.builder()
-                .id(chats.get(2).getId() + 1)
+                .id(pvs.get(2).getId() + 1)
                 .first("ali")
                 .second("amir")
                 .messages(new ArrayList<>())
                 .build();
-        String url = UrlPaths.CHATS_URL_PATH;
+        String url = UrlPaths.PVS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
         Pv pv = Pv.fromPvModel(pvModel);
-        assertThat(pv).isIn(chatRepository.findAll()).isIn(userRepository.findById(pv.getFirst()).get().getChats())
-                .isIn(userRepository.findById(pv.getSecond()).get().getChats());
+        assertThat(pv).isIn(pvRepository.findAll()).isIn(userRepository.findById(pv.getFirst()).get().getPvs())
+                .isIn(userRepository.findById(pv.getSecond()).get().getPvs());
     }
 
     @Test
@@ -331,24 +337,24 @@ class ServerControllerTest {
                 .name("groupName")
                 .messages(new ArrayList<>())
                 .build();
-        String url = UrlPaths.CHATS_URL_PATH;
+        String url = UrlPaths.GROUPS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest();
     }
 
     @Test
     void testNewGroup_ok() {
         GroupModel groupModel = GroupModel.builder()
-                .id(chats.get(2).getId() + 1)
+                .id(pvs.get(2).getId() + 1)
                 .owner("ali")
                 .members(new ArrayList<>(List.of("ali", "reza", "javad")))
                 .name("groupName")
                 .messages(new ArrayList<>())
                 .build();
-        String url = UrlPaths.CHATS_URL_PATH;
+        String url = UrlPaths.GROUPS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
         Group group = Group.fromGroupModel(groupModel);
-        assertThat(group).isIn(chatRepository.findAll());
-        group.getMembers().forEach(member -> assertThat(group).isIn(userRepository.findById(member).get().getChats()));
+        assertThat(group).isIn(groupRepository.findAll());
+        group.getMembers().forEach(member -> assertThat(group).isIn(userRepository.findById(member).get().getGroups()));
     }
 
     @Test
@@ -383,7 +389,7 @@ class ServerControllerTest {
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk();
-        assertThat(message).isNotIn(messageRepository.findAll()).isNotIn(chatRepository.findById(message.getChatId()).get().getMessages());
+        assertThat(message).isNotIn(messageRepository.findAll()).isNotIn(pvRepository.findById(message.getChatId()).get().getMessages());
     }
 
     @Test
@@ -517,9 +523,9 @@ class ServerControllerTest {
     }
 
     @Test
-    void getChat_invalidToken() {
+    void getPv_invalidToken() {
         client.get()
-                .uri(UrlPaths.CHATS_URL_PATH + File.separator + chats.get(0).getId())
+                .uri(UrlPaths.PVS_URL_PATH + File.separator + pvs.get(0).getId())
                 .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
                 .exchange()
                 .expectStatus()
@@ -527,9 +533,9 @@ class ServerControllerTest {
     }
 
     @Test
-    void getChat_chatDoesntExist() {
+    void getPv_chatDoesntExist() {
         client.get()
-                .uri(UrlPaths.CHATS_URL_PATH + File.separator + (chats.get(2).getId() + 1))
+                .uri(UrlPaths.PVS_URL_PATH + File.separator + (pvs.get(2).getId() + 1))
                 .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
                 .exchange()
                 .expectStatus()
@@ -537,9 +543,9 @@ class ServerControllerTest {
     }
 
     @Test
-    void getChat_chatIsNotInYourChats() {
+    void getPv_chatIsNotInYourChats() {
         client.get()
-                .uri(UrlPaths.CHATS_URL_PATH + File.separator + chats.get(0).getId())
+                .uri(UrlPaths.PVS_URL_PATH + File.separator + pvs.get(0).getId())
                 .header(HttpHeaders.AUTHORIZATION, userRepository.findById("javad").get().getToken())
                 .exchange()
                 .expectStatus()
@@ -547,15 +553,57 @@ class ServerControllerTest {
     }
 
     @Test
-    void getChat_ok() {
+    void getPv_ok() {
         client.get()
-                .uri(UrlPaths.CHATS_URL_PATH + File.separator + chats.get(0).getId())
+                .uri(UrlPaths.PVS_URL_PATH + File.separator + pvs.get(0).getId())
                 .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody(ChatModel.class)
-                .isEqualTo(chats.get(0).toChatModel());
+                .expectBody(PvModel.class)
+                .isEqualTo(pvs.get(0).toPvModel());
+    }
+
+    @Test
+    void getGroup_invalidToken() {
+        client.get()
+                .uri(UrlPaths.GROUPS_URL_PATH + File.separator + pvs.get(0).getId())
+                .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getGroup_chatDoesntExist() {
+        client.get()
+                .uri(UrlPaths.GROUPS_URL_PATH + File.separator + (pvs.get(2).getId() + 1))
+                .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getGroup_chatIsNotInYourChats() {
+        client.get()
+                .uri(UrlPaths.GROUPS_URL_PATH + File.separator + pvs.get(0).getId())
+                .header(HttpHeaders.AUTHORIZATION, userRepository.findById("javad").get().getToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getGroup_ok() {
+        client.get()
+                .uri(UrlPaths.GROUPS_URL_PATH + File.separator + pvs.get(0).getId())
+                .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(GroupModel.class)
+                .isEqualTo(groups.get(0).toGroupModel());
     }
 
 }
