@@ -85,19 +85,34 @@ class ServerControllerTest {
     }
 
     @Test
-    void newUser_newUsername() {
-        String URL = UrlPaths.USERS_URL_PATH;
+    void signUp_newUsername() {
+        String URL = UrlPaths.SIGN_UP_URL_PATH;
         String newUsername = "amin";
         client.post().uri(URL).bodyValue(newUsername).exchange().expectStatus().isOk();
         assertTrue(userRepository.existsById(newUsername));
     }
 
     @Test
-    void newUser_duplicateUsername() {
+    void signUp_duplicateUsername() {
         userRepository.save(new User("amin", ServerController.generateToken()));
-        String url = UrlPaths.USERS_URL_PATH;
+        String url = UrlPaths.SIGN_UP_URL_PATH;
         String duplicateUsername = "amin";
         client.post().uri(url).bodyValue(duplicateUsername).exchange().expectStatus().isBadRequest();
+    }
+
+    @Test
+    void signIn_newUsername() {
+        String newUsername = "alireza";
+        String url = UrlPaths.SIGN_IN_URL_PATH + File.separator + newUsername;
+        client.get().uri(url).exchange().expectStatus().isBadRequest();
+    }
+
+    @Test
+    void signIn_duplicateUsername() {
+        userRepository.save(new User("alireza", ServerController.generateToken()));
+        String duplicateUsername = "alireza";
+        String url = UrlPaths.SIGN_IN_URL_PATH + File.separator + duplicateUsername;
+        client.get().uri(url).exchange().expectStatus().isOk();
     }
 
     @Test
