@@ -39,8 +39,8 @@ public class ServerController {
     private final ChatRepository chatRepository;
     private static final int TOKEN_SIZE = 16;
 
-    @PostMapping("/users")
-    public ResponseEntity<String> newUser(@RequestBody String username) {
+    @PostMapping("/signUp")
+    public ResponseEntity<String> signUp(@RequestBody String username) {
         if (userRepository.existsById(username)) {
             return new ResponseEntity<>(Commands.USERNAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
@@ -50,6 +50,11 @@ public class ServerController {
 
     public static String generateToken() {
         return RandomStringUtils.randomAlphabetic(TOKEN_SIZE);
+    }
+
+    @GetMapping("signIn/{username}")
+    public ResponseEntity<UserModel> signIn(@PathVariable String username) {
+        return getUser(username);
     }
 
     @GetMapping("users/{username}")

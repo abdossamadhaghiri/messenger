@@ -94,7 +94,7 @@ public class CommandProcessor {
     }
 
     private String signUp(String username) {
-        String url = UrlPaths.USERS_URL_PATH;
+        String url = UrlPaths.SIGN_UP_URL_PATH;
 
         ResponseEntity<String> response = client.post()
                 .uri(url)
@@ -108,7 +108,7 @@ public class CommandProcessor {
     }
 
     private boolean signIn(String username) {
-        String url = UrlPaths.USERS_URL_PATH + File.separator + username;
+        String url = UrlPaths.SIGN_IN_URL_PATH + File.separator + username;
 
         ResponseEntity<UserModel> response = client.get()
                 .uri(url)
