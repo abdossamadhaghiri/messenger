@@ -24,8 +24,8 @@ public class Pv extends Chat {
     private String first;
     private String second;
 
-    @Override
-    public ChatModel toChatModel() {
+
+    public PvModel toPvModel() {
         List<MessageModel> messageModels = new ArrayList<>();
         this.getMessages().forEach(message -> messageModels.add(message.toMessageModel()));
         return PvModel.builder()

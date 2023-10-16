@@ -10,12 +10,14 @@ public final class ApiAddresses {
 
     public ApiAddresses(ServerAddress serverAddress) {
         usersApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.USERS_URL_PATH;
-        chatsApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.CHATS_URL_PATH;
+        pvsApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.PVS_URL_PATH;
+        groupsApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.GROUPS_URL_PATH;
         messagesApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.MESSAGES_URL_PATH;
     }
 
     private final String usersApiUrl;
-    private final String chatsApiUrl;
+    private final String pvsApiUrl;
+    private final String groupsApiUrl;
     private final String messagesApiUrl;
 
 

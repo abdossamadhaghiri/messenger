@@ -4,9 +4,9 @@ import com.example.server.entity.Pv;
 import com.example.server.entity.User;
 import com.example.server.entity.Group;
 import com.example.server.entity.Message;
-import com.example.server.entity.Chat;
-import com.example.server.repository.ChatRepository;
+import com.example.server.repository.GroupRepository;
 import com.example.server.repository.MessageRepository;
+import com.example.server.repository.PvRepository;
 import lombok.AllArgsConstructor;
 import com.example.server.repository.UserRepository;
 import org.apache.commons.lang.RandomStringUtils;
@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @AllArgsConstructor
@@ -36,7 +35,8 @@ import java.util.Optional;
 public class ServerController {
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
-    private final ChatRepository chatRepository;
+    private final PvRepository pvRepository;
+    private final GroupRepository groupRepository;
     private static final int TOKEN_SIZE = 16;
 
     @PostMapping("/users")
@@ -44,7 +44,7 @@ public class ServerController {
         if (userRepository.existsById(username)) {
             return new ResponseEntity<>(Commands.USERNAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
-        userRepository.save(new User(username, generateToken(), new ArrayList<>()));
+        userRepository.save(new User(username, generateToken(), new ArrayList<>(), new ArrayList<>()));
         return new ResponseEntity<>(Commands.SUCCESSFULLY_SIGNED_UP, HttpStatus.OK);
     }
 
@@ -58,30 +58,24 @@ public class ServerController {
         return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
     }
 
-    @PostMapping("/chats")
-    public ResponseEntity<ChatModel> newChat(@RequestBody ChatModel chatModel) {
-        if (chatModel instanceof PvModel pvModel) {
-            return newPv(pvModel);
-        }
-        return newGroup(((GroupModel) chatModel));
-    }
-
-    private ResponseEntity<ChatModel> newPv(PvModel pvModel) {
+    @PostMapping("/pvs")
+    public ResponseEntity<PvModel> newPv(@RequestBody PvModel pvModel) {
         Optional<User> firstUser = userRepository.findById(pvModel.getFirst());
         Optional<User> secondUser = userRepository.findById(pvModel.getSecond());
         if (firstUser.isEmpty() || secondUser.isEmpty() || getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
         Pv pv = Pv.builder().first(pvModel.getFirst()).second(pvModel.getSecond()).messages(new ArrayList<>()).build();
-        chatRepository.save(pv);
-        firstUser.get().getChats().add(pv);
-        secondUser.get().getChats().add(pv);
+        pvRepository.save(pv);
+        firstUser.get().getPvs().add(pv);
+        secondUser.get().getPvs().add(pv);
         userRepository.save(firstUser.get());
         userRepository.save(secondUser.get());
-        return new ResponseEntity<>(pv.toChatModel(), HttpStatus.OK);
+        return new ResponseEntity<>(pv.toPvModel(), HttpStatus.OK);
     }
 
-    private ResponseEntity<ChatModel> newGroup(GroupModel groupModel) {
+    @PostMapping("/groups")
+    public ResponseEntity<ChatModel> newGroup(@RequestBody GroupModel groupModel) {
         if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
@@ -91,30 +85,39 @@ public class ServerController {
                 .name(groupModel.getName())
                 .messages(new ArrayList<>())
                 .build();
-        chatRepository.save(group);
+        groupRepository.save(group);
         for (String member : group.getMembers()) {
             User user = userRepository.findById(member).get();
-            user.getChats().add(group);
+            user.getGroups().add(group);
             userRepository.save(user);
         }
-        return new ResponseEntity<>(group.toChatModel(), HttpStatus.OK);
+        return new ResponseEntity<>(group.toGroupModel(), HttpStatus.OK);
     }
 
-    @GetMapping("/chats/{chatId}")
-    public ResponseEntity<ChatModel> getChat(@PathVariable Long chatId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+    @GetMapping("/pvs/{pvId}")
+    public ResponseEntity<PvModel> getPv(@PathVariable Long pvId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
-        Optional<Chat> chat = chatRepository.findById(chatId);
-        if (user.isEmpty() || chat.isEmpty() || !user.get().getChats().contains(chat.get())) {
+        Optional<Pv> pv = pvRepository.findById(pvId);
+        if (user.isEmpty() || pv.isEmpty() || !user.get().getPvs().contains(pv.get())) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(chat.get().toChatModel(), HttpStatus.OK);
+        return new ResponseEntity<>(pv.get().toPvModel(), HttpStatus.OK);
+    }
+
+    @GetMapping("/groups/{groupId}")
+    public ResponseEntity<GroupModel> getGroup(@PathVariable Long groupId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        Optional<Group> group = groupRepository.findById(groupId);
+        if (user.isEmpty() || group.isEmpty() || !user.get().getGroups().contains(group.get())) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(group.get().toGroupModel(), HttpStatus.OK);
     }
 
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
-        for (Chat chat : chatRepository.findAll()) {
-            if (chat instanceof Pv pv &&
-                    ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
-                    (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
+        for (Pv pv : pvRepository.findAll()) {
+            if ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
+                    (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername))) {
                 return pv;
             }
         }
@@ -127,11 +130,12 @@ public class ServerController {
         if (sender.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
-        Optional<Chat> chat = chatRepository.findById(messageModel.getChatId());
-        if (chat.isEmpty()) {
+        Optional<Pv> pv = pvRepository.findById(messageModel.getChatId());
+        Optional<Group> group = groupRepository.findById(messageModel.getChatId());
+        if (pv.isEmpty() && group.isEmpty()) {
             return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
-        if (!sender.get().getChats().contains(chat.get())) {
+        if (!sender.get().getPvs().contains(pv.get()) && !sender.get().getGroups().contains(group.get())) {
             return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.BAD_REQUEST);
         }
         Optional<Message> repliedMessage = messageRepository.findById(messageModel.getRepliedMessageId());
@@ -152,8 +156,13 @@ public class ServerController {
                 .forwardedFrom(messageModel.getForwardedFrom())
                 .build();
         messageRepository.save(message);
-        chat.get().getMessages().add(message);
-        chatRepository.save(chat.get());
+        if (group.isPresent()) {
+            group.get().getMessages().add(message);
+            groupRepository.save(group.get());
+        } else {
+            pv.get().getMessages().add(message);
+            pvRepository.save(pv.get());
+        }
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }
 
@@ -198,7 +207,9 @@ public class ServerController {
         Optional<User> user = userRepository.findByToken(token);
         Optional<Message> message = messageRepository.findById(messageId);
 
-        if (user.isEmpty() || message.isEmpty() || !user.get().getChats().contains(chatRepository.findById(message.get().getChatId()).get())) {
+        if (user.isEmpty() || message.isEmpty() ||
+                (!user.get().getPvs().contains(pvRepository.findById(message.get().getChatId()).get())
+        && !user.get().getGroups().contains(groupRepository.findById(message.get().getChatId()).get()))) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(message.get(), HttpStatus.OK);

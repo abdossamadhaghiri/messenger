@@ -27,8 +27,7 @@ public class Group extends Chat {
 
     private String name;
 
-    @Override
-    public ChatModel toChatModel() {
+    public GroupModel toGroupModel() {
         List<MessageModel> messageModels = new ArrayList<>();
         this.getMessages().forEach(message -> messageModels.add(message.toMessageModel()));
         return GroupModel.builder()
