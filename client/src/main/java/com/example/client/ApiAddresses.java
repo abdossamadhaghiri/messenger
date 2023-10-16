@@ -1,7 +1,6 @@
 package com.example.client;
 
 import lombok.Getter;
-import org.example.UrlPaths;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -9,14 +8,9 @@ import org.springframework.stereotype.Component;
 public final class ApiAddresses {
 
     public ApiAddresses(ServerAddress serverAddress) {
-        usersApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.USERS_URL_PATH;
-        chatsApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.CHATS_URL_PATH;
-        messagesApiUrl = serverAddress.getAddress() + ":" + serverAddress.getPort() + UrlPaths.MESSAGES_URL_PATH;
-
+        baseUrl = serverAddress.getAddress() + ":" + serverAddress.getPort();
     }
 
-    private final String usersApiUrl;
-    private final String chatsApiUrl;
-    private final String messagesApiUrl;
+    private final String baseUrl;
 
 }
