@@ -30,7 +30,7 @@ public class CommandProcessor {
 
     private final ApiAddresses apiAddresses;
     private WebClient client;
-    private UserModel onlineUsername;
+    private UserModel onlineUser;
     private Scanner scanner;
 
     public void run() {
@@ -63,8 +63,13 @@ public class CommandProcessor {
     private void continueWithOnlineUser() {
         boolean flag = true;
         while (flag) {
-            List<ChatModel> myChats = getChats();
-            showChatList(myChats);
+            UserModel userModel = getUser(onlineUser.getUsername());
+            if (userModel == null) {
+                System.out.println(Commands.PLEASE_TRY_AGAIN);
+                break;
+            }
+            onlineUser = userModel;
+            showChatList(onlineUser.getChats());
             System.out.println("1. select chat\n2. enter a username to start chat\n3. create a group\n4. logout");
             String option = scanner.nextLine();
             switch (option) {
@@ -96,7 +101,6 @@ public class CommandProcessor {
 
     private String signUp(String username) {
         String url = UrlPaths.SIGN_UP_URL_PATH;
-
         ResponseEntity<String> response = client.post()
                 .uri(url)
                 .bodyValue(username)
@@ -110,7 +114,6 @@ public class CommandProcessor {
 
     private boolean signIn(String username) {
         String url = UrlPaths.SIGN_IN_URL_PATH + SLASH + username;
-
         ResponseEntity<UserModel> response = client.get()
                 .uri(url)
                 .retrieve()
@@ -119,7 +122,7 @@ public class CommandProcessor {
                 .block();
         if (response != null) {
             if (response.getStatusCode().equals(HttpStatus.OK)) {
-                onlineUsername = response.getBody();
+                onlineUser = response.getBody();
                 return true;
             } else {
                 System.out.println(Commands.USERNAME_DOESNT_EXIST);
@@ -128,16 +131,6 @@ public class CommandProcessor {
             System.out.println(Commands.PLEASE_TRY_AGAIN);
         }
         return false;
-    }
-
-    private List<ChatModel> getChats() {
-        String url = UrlPaths.CHATS_URL_PATH + SLASH + onlineUsername.getUsername();
-        ResponseEntity<List<ChatModel>> response = client.get()
-                .uri(url)
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<List<ChatModel>>() {
-        }).block();
-        return response != null ? response.getBody() : new ArrayList<>();
     }
 
     private void showChatList(List<ChatModel> chats) {
@@ -151,7 +144,7 @@ public class CommandProcessor {
     }
 
     private String getPeer(PvModel pv) {
-        if (pv.getFirst().equals(onlineUsername.getUsername())) {
+        if (pv.getFirst().equals(onlineUser.getUsername())) {
             return pv.getSecond();
         }
         return pv.getFirst();
@@ -218,12 +211,11 @@ public class CommandProcessor {
     }
 
     private boolean canEnterOldChat(Long chatId) {
-        ResponseEntity<List<MessageModel>> response = getMessagesInOldChat(chatId);
-        return response != null && response.getStatusCode().equals(HttpStatus.OK);
+        return onlineUser.getChats().stream().anyMatch(chat -> chat.getId().equals(chatId));
     }
 
     private ResponseEntity<List<MessageModel>> getMessagesInOldChat(Long chatId) {
-        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + onlineUsername.getUsername() + SLASH + chatId;
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + onlineUser.getUsername() + SLASH + chatId;
         return client.get()
                 .uri(url)
                 .retrieve()
@@ -234,7 +226,7 @@ public class CommandProcessor {
 
     private boolean canStartNewChat(String username) {
         String url = UrlPaths.CHATS_URL_PATH;
-        PvModel pv = new PvModel(onlineUsername.getUsername(), username);
+        PvModel pv = new PvModel(onlineUser.getUsername(), username);
         ResponseEntity<String> response = client.post()
                 .uri(url)
                 .bodyValue(pv)
@@ -246,18 +238,19 @@ public class CommandProcessor {
     }
 
     private Long getChatId(String username) {
-        String url = UrlPaths.CHATS_URL_PATH + SLASH + onlineUsername.getUsername() + SLASH + username;
-        ResponseEntity<Long> response = client.get()
-                .uri(url)
-                .retrieve()
-                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                .toEntity(Long.class)
-                .block();
-        return response.getBody();
+        UserModel userModel = getUser(onlineUser.getUsername());
+        if (userModel != null) {
+            for (ChatModel chat : userModel.getChats()) {
+                if (chat instanceof PvModel pv && (pv.getFirst().equals(username) || pv.getSecond().equals(username))) {
+                    return pv.getId();
+                }
+            }
+        }
+        return -1L;
     }
 
     private String recognizeSender(String sender) {
-        if (sender.equals(onlineUsername.getUsername())) {
+        if (sender.equals(onlineUser.getUsername())) {
             return "you";
         }
         return sender;
@@ -289,7 +282,7 @@ public class CommandProcessor {
     private String sendMessage(String text, Long chatId, Long repliedMessageId, String forwardedFrom) {
         MessageModel messageModel = MessageModel.builder()
                 .text(text)
-                .sender(onlineUsername.getUsername())
+                .sender(onlineUser.getUsername())
                 .chatId(chatId)
                 .repliedMessageId(repliedMessageId)
                 .forwardedFrom(forwardedFrom)
@@ -339,9 +332,9 @@ public class CommandProcessor {
                 System.out.println(Commands.INVALID_COMMAND);
             }
         }
-        members.add(onlineUsername.getUsername());
+        members.add(onlineUser.getUsername());
         String url = UrlPaths.CHATS_URL_PATH;
-        GroupModel group = new GroupModel(onlineUsername.getUsername(), members, name);
+        GroupModel group = new GroupModel(onlineUser.getUsername(), members, name);
         ResponseEntity<String> response = client.post()
                 .uri(url)
                 .bodyValue(group)
@@ -357,13 +350,13 @@ public class CommandProcessor {
 
     private String deleteMessage(Long messageId, Long chatId) {
         MessageModel messageModel = getMessage(messageId);
-        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUsername.getUsername())) {
+        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUser.getUsername())) {
             return Commands.INVALID_MESSAGE_ID;
         }
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
         ResponseEntity<String> response = client.delete()
                 .uri(url)
-                .header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken())
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
                 .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -376,7 +369,7 @@ public class CommandProcessor {
 
     private String editMessage(Long messageId, Long chatId) {
         MessageModel messageModel = getMessage(messageId);
-        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUsername.getUsername())) {
+        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUser.getUsername())) {
             return Commands.INVALID_MESSAGE_ID;
         }
         System.out.println("write your new message:");
@@ -385,7 +378,7 @@ public class CommandProcessor {
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
         ResponseEntity<String> response = client.put()
                 .uri(url)
-                .header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken()).bodyValue(newMessageModel)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken()).bodyValue(newMessageModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -431,10 +424,25 @@ public class CommandProcessor {
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
         ResponseEntity<MessageModel> response = client.get()
                 .uri(url)
-                .header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken())
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(MessageModel.class)
+                .block();
+        if (response == null) {
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
+            return null;
+        }
+        return response.getBody();
+    }
+
+    private UserModel getUser(String username) {
+        String url = UrlPaths.USERS_URL_PATH + SLASH + username;
+        ResponseEntity<UserModel> response = client.get()
+                .uri(url)
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(UserModel.class)
                 .block();
         if (response == null) {
             System.out.println(Commands.PLEASE_TRY_AGAIN);

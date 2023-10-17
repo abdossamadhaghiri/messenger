@@ -44,7 +44,7 @@ public class ServerController {
         if (userRepository.existsById(username)) {
             return new ResponseEntity<>(Commands.USERNAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
-        userRepository.save(new User(username, generateToken()));
+        userRepository.save(new User(username, generateToken(), new ArrayList<>()));
         return new ResponseEntity<>(Commands.SUCCESSFULLY_SIGNED_UP, HttpStatus.OK);
     }
 
@@ -96,7 +96,9 @@ public class ServerController {
     }
 
     private ResponseEntity<String> newPv(PvModel pvModel) {
-        if (!userRepository.existsById(pvModel.getFirst()) || !userRepository.existsById(pvModel.getSecond())) {
+        Optional<User> firstUser = userRepository.findById(pvModel.getFirst());
+        Optional<User> secondUser = userRepository.findById(pvModel.getSecond());
+        if (firstUser.isEmpty() || secondUser.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
         }
         if (getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
@@ -104,6 +106,10 @@ public class ServerController {
         }
         Pv pv = new Pv(pvModel.getFirst(), pvModel.getSecond());
         chatRepository.save(pv);
+        firstUser.get().getChats().add(pv);
+        secondUser.get().getChats().add(pv);
+        userRepository.save(firstUser.get());
+        userRepository.save(secondUser.get());
         return new ResponseEntity<>(Commands.START_YOUR_CHAT, HttpStatus.OK);
     }
 
@@ -113,14 +119,16 @@ public class ServerController {
         }
         Group group = new Group(groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
         chatRepository.save(group);
+        for (String member : group.getMembers()) {
+            User user = userRepository.findById(member).get();
+            user.getChats().add(group);
+            userRepository.save(user);
+        }
         return new ResponseEntity<>(Commands.GROUP_SUCCESSFULLY_CREATED, HttpStatus.OK);
     }
 
     private boolean isInChats(String myUsername, Chat chat) {
-        if (chat instanceof Pv pv) {
-            return pv.getFirst().equals(myUsername) || pv.getSecond().equals(myUsername);
-        }
-        return ((Group) chat).getMembers().contains(myUsername);
+        return userRepository.findById(myUsername).get().getChats().contains(chat);
     }
 
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
@@ -132,15 +140,6 @@ public class ServerController {
             }
         }
         return null;
-    }
-
-    @GetMapping("/chatId/{firstUsername}/{secondUsername}")
-    public ResponseEntity<Long> getChatId(@PathVariable String firstUsername, @PathVariable String secondUsername) {
-        Pv pv = getPvByUsernames(firstUsername, secondUsername);
-        if (userRepository.existsById(firstUsername) && userRepository.existsById(secondUsername) && pv != null) {
-            return new ResponseEntity<>(pv.getId(), HttpStatus.OK);
-        }
-        return new ResponseEntity<>(-1L, HttpStatus.BAD_REQUEST);
     }
 
     @PostMapping("/messages")
