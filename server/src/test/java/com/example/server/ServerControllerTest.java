@@ -19,10 +19,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.example.UrlPaths.SLASH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -103,7 +103,7 @@ class ServerControllerTest {
     @Test
     void signIn_newUsername() {
         String newUsername = "alireza";
-        String url = UrlPaths.SIGN_IN_URL_PATH + File.separator + newUsername;
+        String url = UrlPaths.SIGN_IN_URL_PATH + SLASH + newUsername;
         client.get().uri(url).exchange().expectStatus().isBadRequest();
     }
 
@@ -111,14 +111,14 @@ class ServerControllerTest {
     void signIn_duplicateUsername() {
         userRepository.save(new User("alireza", ServerController.generateToken()));
         String duplicateUsername = "alireza";
-        String url = UrlPaths.SIGN_IN_URL_PATH + File.separator + duplicateUsername;
+        String url = UrlPaths.SIGN_IN_URL_PATH + SLASH + duplicateUsername;
         client.get().uri(url).exchange().expectStatus().isOk();
     }
 
     @Test
     void getUser_newUsername() {
         String newUsername = "alireza";
-        String url = UrlPaths.USERS_URL_PATH + File.separator + newUsername;
+        String url = UrlPaths.USERS_URL_PATH + SLASH + newUsername;
         client.get().uri(url).exchange().expectStatus().isBadRequest();
     }
 
@@ -126,7 +126,7 @@ class ServerControllerTest {
     void getUser_duplicateUsername() {
         userRepository.save(new User("alireza", ServerController.generateToken()));
         String duplicateUsername = "alireza";
-        String url = UrlPaths.USERS_URL_PATH + File.separator + duplicateUsername;
+        String url = UrlPaths.USERS_URL_PATH + SLASH + duplicateUsername;
         client.get().uri(url).exchange().expectStatus().isOk();
     }
 
@@ -346,7 +346,7 @@ class ServerControllerTest {
     @Test
     void testDeleteMessage_invalidToken() {
         Message message = messages.get(2);
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.INVALID_TOKEN, result.getResponseBody()));
     }
@@ -355,7 +355,7 @@ class ServerControllerTest {
     void testDeleteMessage_messageDoesntExists() {
         Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + (message.getId() + 1);
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + (message.getId() + 1);
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
@@ -364,7 +364,7 @@ class ServerControllerTest {
     void testDeleteMessage_messageDoesntYourMessage() {
         Message message = messages.get(2);
         User user = userRepository.findById(messages.get(1).getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
     }
@@ -373,7 +373,7 @@ class ServerControllerTest {
     void testDeleteMessage_ok() {
         Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk();
         assertThat(messageRepository.findById(message.getId())).isEmpty();
     }
@@ -387,7 +387,7 @@ class ServerControllerTest {
                                                 .sender(message.getSender())
                                                 .chatId(message.getChatId())
                                                 .build();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
@@ -409,7 +409,7 @@ class ServerControllerTest {
                                                 .sender(message.getSender())
                                                 .chatId(message.getChatId())
                                                 .build();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + (message.getId() + 1);
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + (message.getId() + 1);
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, sender.getToken())
@@ -431,7 +431,7 @@ class ServerControllerTest {
                                                 .chatId(message.getChatId())
                                                 .build();
         User user = userRepository.findById(messages.get(1).getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
@@ -453,7 +453,7 @@ class ServerControllerTest {
                                                 .chatId(message.getChatId())
                                                 .build();
         User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, sender.getToken())
@@ -467,7 +467,7 @@ class ServerControllerTest {
     @Test
     void testGetMessage_invalidToken() {
         Message message = messages.get(2);
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.get().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest();
     }
 
@@ -475,7 +475,7 @@ class ServerControllerTest {
     void testGetMessage_messageDoesntExists() {
         Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + (message.getId() + 1);
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + (message.getId() + 1);
         client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest();
     }
 
@@ -483,7 +483,7 @@ class ServerControllerTest {
     void getMessage_messageIsNotInYourChats() {
         Message message = messages.get(2);
         User user = userRepository.findById("ali").get();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.get()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
@@ -497,7 +497,7 @@ class ServerControllerTest {
         Message message = messages.get(2);
         User user = userRepository.findById("javad").get();
         MessageModel expected = message.toMessageModel();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + message.getId();
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
         client.get()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
