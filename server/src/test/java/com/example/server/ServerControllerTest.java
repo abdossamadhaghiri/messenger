@@ -77,10 +77,10 @@ class ServerControllerTest {
         Chat rezaJavadChat = chats.get(2);
         chatRepository.saveAll(List.of(aliRezaChat, aliJavadChat, rezaJavadChat));
 
-        User ali = new User("ali", ServerController.generateToken());
-        User reza = new User("reza", ServerController.generateToken());
-        User javad = new User("javad", ServerController.generateToken());
-        User amir = new User("amir", ServerController.generateToken());
+        User ali = new User("ali", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, aliJavadChat)));
+        User reza = new User("reza", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, rezaJavadChat)));
+        User javad = new User("javad", ServerController.generateToken(), new ArrayList<>(List.of(aliJavadChat, rezaJavadChat)));
+        User amir = new User("amir", ServerController.generateToken(), new ArrayList<>());
         userRepository.saveAll(List.of(ali, reza, javad, amir));
     }
 
@@ -94,7 +94,7 @@ class ServerControllerTest {
 
     @Test
     void signUp_duplicateUsername() {
-        userRepository.save(new User("amin", ServerController.generateToken()));
+        userRepository.save(new User("amin", ServerController.generateToken(), new ArrayList<>()));
         String url = UrlPaths.SIGN_UP_URL_PATH;
         String duplicateUsername = "amin";
         client.post().uri(url).bodyValue(duplicateUsername).exchange().expectStatus().isBadRequest();
@@ -109,7 +109,7 @@ class ServerControllerTest {
 
     @Test
     void signIn_duplicateUsername() {
-        userRepository.save(new User("alireza", ServerController.generateToken()));
+        userRepository.save(new User("alireza", ServerController.generateToken(), new ArrayList<>()));
         String duplicateUsername = "alireza";
         String url = UrlPaths.SIGN_IN_URL_PATH + SLASH + duplicateUsername;
         client.get().uri(url).exchange().expectStatus().isOk();
@@ -124,7 +124,7 @@ class ServerControllerTest {
 
     @Test
     void getUser_duplicateUsername() {
-        userRepository.save(new User("alireza", ServerController.generateToken()));
+        userRepository.save(new User("alireza", ServerController.generateToken(), new ArrayList<>()));
         String duplicateUsername = "alireza";
         String url = UrlPaths.USERS_URL_PATH + SLASH + duplicateUsername;
         client.get().uri(url).exchange().expectStatus().isOk();
