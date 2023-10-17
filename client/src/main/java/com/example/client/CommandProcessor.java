@@ -14,11 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Pattern;
+
+import static org.example.UrlPaths.SLASH;
 
 @Configuration
 public class CommandProcessor {
@@ -108,7 +109,7 @@ public class CommandProcessor {
     }
 
     private boolean signIn(String username) {
-        String url = UrlPaths.SIGN_IN_URL_PATH + File.separator + username;
+        String url = UrlPaths.SIGN_IN_URL_PATH + SLASH + username;
 
         ResponseEntity<UserModel> response = client.get()
                 .uri(url)
@@ -130,7 +131,7 @@ public class CommandProcessor {
     }
 
     private List<ChatModel> getChats() {
-        String url = UrlPaths.CHATS_URL_PATH + File.separator + onlineUsername.getUsername();
+        String url = UrlPaths.CHATS_URL_PATH + SLASH + onlineUsername.getUsername();
         ResponseEntity<List<ChatModel>> response = client.get()
                 .uri(url)
                 .retrieve()
@@ -222,7 +223,7 @@ public class CommandProcessor {
     }
 
     private ResponseEntity<List<MessageModel>> getMessagesInOldChat(Long chatId) {
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + onlineUsername.getUsername() + File.separator + chatId;
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + onlineUsername.getUsername() + SLASH + chatId;
         return client.get()
                 .uri(url)
                 .retrieve()
@@ -245,7 +246,7 @@ public class CommandProcessor {
     }
 
     private Long getChatId(String username) {
-        String url = UrlPaths.CHATS_URL_PATH + File.separator + onlineUsername.getUsername() + File.separator + username;
+        String url = UrlPaths.CHATS_URL_PATH + SLASH + onlineUsername.getUsername() + SLASH + username;
         ResponseEntity<Long> response = client.get()
                 .uri(url)
                 .retrieve()
@@ -315,7 +316,7 @@ public class CommandProcessor {
             if (option.equals("1")) {
                 System.out.println("enter the username:");
                 String username = scanner.nextLine();
-                String url = UrlPaths.USERS_URL_PATH + File.separator + username;
+                String url = UrlPaths.USERS_URL_PATH + SLASH + username;
                 ResponseEntity<String> response = client.get()
                         .uri(url)
                         .retrieve()
@@ -359,7 +360,7 @@ public class CommandProcessor {
         if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUsername.getUsername())) {
             return Commands.INVALID_MESSAGE_ID;
         }
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + messageId;
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
         ResponseEntity<String> response = client.delete()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken())
@@ -381,7 +382,7 @@ public class CommandProcessor {
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
         MessageModel newMessageModel = messageModel.toBuilder().text(newText).build();
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + messageId;
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
         ResponseEntity<String> response = client.put()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken()).bodyValue(newMessageModel)
@@ -427,7 +428,7 @@ public class CommandProcessor {
     }
 
     private MessageModel getMessage(Long messageId) {
-        String url = UrlPaths.MESSAGES_URL_PATH + File.separator + messageId;
+        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
         ResponseEntity<MessageModel> response = client.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUsername.getToken())
