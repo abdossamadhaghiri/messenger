@@ -23,7 +23,7 @@ import java.util.List;
 @NoArgsConstructor
 public abstract class ChatModel {
 
-    private @Setter Long id;
+    private Long id;
     @Builder.Default
     private List<MessageModel> messages = new ArrayList<>();
 
