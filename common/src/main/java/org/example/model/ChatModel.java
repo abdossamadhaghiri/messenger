@@ -2,6 +2,7 @@ package org.example.model;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,6 +14,7 @@ import java.util.List;
         @JsonSubTypes.Type(value = GroupModel.class, name = "groupModel")
 })
 @Getter
+@EqualsAndHashCode
 public abstract class ChatModel {
 
     private @Setter Long id;
