@@ -7,7 +7,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.example.model.ChatModel;
 import org.example.model.GroupModel;
+import org.example.model.MessageModel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
@@ -23,15 +25,24 @@ public class Group extends Chat {
 
     private String name;
 
-    public Group(Long id, String owner, List<String> members, String name) {
+    public Group(Long id, String owner, List<String> members, String name, List<Message> messages) {
         this.setId(id);
         this.owner = owner;
         this.members = members;
         this.name = name;
+        this.setMessages(messages);
     }
 
     @Override
     public ChatModel toChatModel() {
-        return new GroupModel(this.getId(), this.owner, this.members, this.name);
+        List<MessageModel> messageModels = new ArrayList<>();
+        this.getMessages().forEach(message -> messageModels.add(message.toMessageModel()));
+        return GroupModel.builder()
+                .id(this.getId())
+                .owner(this.owner)
+                .members(this.members)
+                .name(this.name)
+                .messages(messageModels)
+                .build();
     }
 }

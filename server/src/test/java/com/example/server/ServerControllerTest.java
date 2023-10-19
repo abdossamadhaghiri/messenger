@@ -296,7 +296,7 @@ class ServerControllerTest {
 
     @Test
     void testNewPv_invalidFirstUsername() {
-        PvModel pvModel = new PvModel("alireza", "ali");
+        PvModel pvModel = PvModel.builder().first("alireza").second("ali").build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
@@ -304,7 +304,7 @@ class ServerControllerTest {
 
     @Test
     void testNewPv_invalidSecondUsername() {
-        PvModel pvModel = new PvModel("ali", "alireza");
+        PvModel pvModel = PvModel.builder().first("ali").second("alireza").build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
@@ -312,7 +312,7 @@ class ServerControllerTest {
 
     @Test
     void testNewPv_duplicateChat() {
-        PvModel pvModel = new PvModel("ali", "reza");
+        PvModel pvModel = PvModel.builder().first("ali").second("reza").build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.CHAT_ALREADY_EXISTS, result.getResponseBody()));
@@ -320,17 +320,21 @@ class ServerControllerTest {
 
     @Test
     void testNewPv_ok() {
-        PvModel pvModel = new PvModel(chats.get(2).getId() + 1, "ali", "amir");
+        PvModel pvModel = PvModel.builder().id(chats.get(2).getId() + 1).first("ali").second("amir").build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
-        Pv pv = new Pv(pvModel.getId(), pvModel.getFirst(), pvModel.getSecond());
+        Pv pv = new Pv(pvModel.getId(), pvModel.getFirst(), pvModel.getSecond(), new ArrayList<>());
         assertThat(pv).isIn(chatRepository.findAll()).isIn(userRepository.findById(pv.getFirst()).get().getChats())
                 .isIn(userRepository.findById(pv.getSecond()).get().getChats());
     }
 
     @Test
     void testNewGroup_invalidContent() {
-        GroupModel groupModel = new GroupModel("ali", new ArrayList<>(List.of("ali", "reza", "alireza")), "groupName");
+        GroupModel groupModel = GroupModel.builder()
+                .owner("ali")
+                .members(new ArrayList<>(List.of("ali", "reza", "alireza")))
+                .name("groupName")
+                .build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
                 assertEquals(Commands.INVALID_GROUP_CONTENT, result.getResponseBody()));
@@ -338,11 +342,15 @@ class ServerControllerTest {
 
     @Test
     void testNewGroup_ok() {
-        GroupModel groupModel = new GroupModel(chats.get(2).getId() + 1, "ali",
-                new ArrayList<>(List.of("ali", "reza", "javad")), "groupName");
+        GroupModel groupModel = GroupModel.builder()
+                .id(chats.get(2).getId() + 1)
+                .owner("ali")
+                .members(new ArrayList<>(List.of("ali", "reza", "javad")))
+                .name("groupName")
+                .build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
-        Group group = new Group(groupModel.getId(), groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
+        Group group = new Group(groupModel.getId(), groupModel.getOwner(), groupModel.getMembers(), groupModel.getName(), new ArrayList<>());
         assertThat(group).isIn(chatRepository.findAll());
         group.getMembers().forEach(member -> assertThat(group).isIn(userRepository.findById(member).get().getChats()));
     }
