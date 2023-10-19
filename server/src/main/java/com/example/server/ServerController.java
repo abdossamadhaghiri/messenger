@@ -107,7 +107,7 @@ public class ServerController {
     public ResponseEntity<ChatModel> getChat(@PathVariable Long chatId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         Optional<Chat> chat = chatRepository.findById(chatId);
-        if (user.isEmpty() || chat.isEmpty()) {
+        if (user.isEmpty() || chat.isEmpty() || !user.get().getChats().contains(chat.get())) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(chat.get().toChatModel(), HttpStatus.OK);

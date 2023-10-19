@@ -9,6 +9,7 @@ import com.example.server.repository.MessageRepository;
 import com.example.server.repository.ChatRepository;
 import com.example.server.repository.UserRepository;
 import org.example.UrlPaths;
+import org.example.model.ChatModel;
 import org.example.model.GroupModel;
 import org.example.model.MessageModel;
 import org.example.model.PvModel;
@@ -511,5 +512,46 @@ class ServerControllerTest {
               .isEqualTo(expected);
     }
 
+    @Test
+    void getChat_invalidToken() {
+        client.get()
+                .uri(UrlPaths.CHATS_URL_PATH + SLASH + chats.get(0).getId())
+                .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getChat_chatDoesntExist() {
+        client.get()
+                .uri(UrlPaths.CHATS_URL_PATH + SLASH + (chats.get(2).getId() + 1))
+                .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getChat_chatIsNotInYourChats() {
+        client.get()
+                .uri(UrlPaths.CHATS_URL_PATH + SLASH + chats.get(0).getId())
+                .header(HttpHeaders.AUTHORIZATION, userRepository.findById("javad").get().getToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getChat_ok() {
+        client.get()
+                .uri(UrlPaths.CHATS_URL_PATH + SLASH + chats.get(0).getId())
+                .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(ChatModel.class)
+                .isEqualTo(chats.get(0).toChatModel());
+    }
 
 }
