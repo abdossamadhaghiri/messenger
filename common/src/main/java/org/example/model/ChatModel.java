@@ -2,10 +2,14 @@ package org.example.model;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -15,9 +19,12 @@ import java.util.List;
 })
 @Getter
 @EqualsAndHashCode
+@SuperBuilder
+@NoArgsConstructor
 public abstract class ChatModel {
 
     private @Setter Long id;
-    private List<MessageModel> messages;
+    @Builder.Default
+    private List<MessageModel> messages = new ArrayList<>();
 
 }

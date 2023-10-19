@@ -220,10 +220,10 @@ public class CommandProcessor {
 
     private boolean canStartNewChat(String username) {
         String url = UrlPaths.CHATS_URL_PATH;
-        PvModel pv = new PvModel(onlineUser.getUsername(), username);
+        PvModel pvModel = PvModel.builder().first(onlineUser.getUsername()).second(username).build();
         ResponseEntity<String> response = client.post()
                 .uri(url)
-                .bodyValue(pv)
+                .bodyValue(pvModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -328,10 +328,10 @@ public class CommandProcessor {
         }
         members.add(onlineUser.getUsername());
         String url = UrlPaths.CHATS_URL_PATH;
-        GroupModel group = new GroupModel(onlineUser.getUsername(), members, name);
+        GroupModel groupModel = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
         ResponseEntity<String> response = client.post()
                 .uri(url)
-                .bodyValue(group)
+                .bodyValue(groupModel)
                 .retrieve()
                 .toEntity(String.class)
                 .block();
