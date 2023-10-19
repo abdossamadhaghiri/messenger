@@ -36,4 +36,15 @@ public class Pv extends Chat {
                 .messages(messageModels)
                 .build();
     }
+
+    public static Pv fromPvModel(PvModel pvModel) {
+        List<Message> messages = new ArrayList<>();
+        pvModel.getMessages().forEach(messageModel -> messages.add(Message.fromMessageModel(messageModel)));
+        return Pv.builder()
+                .id(pvModel.getId())
+                .first(pvModel.getFirst())
+                .second(pvModel.getSecond())
+                .messages(messages)
+                .build();
+    }
 }

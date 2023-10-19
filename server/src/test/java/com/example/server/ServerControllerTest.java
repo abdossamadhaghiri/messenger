@@ -323,7 +323,7 @@ class ServerControllerTest {
         PvModel pvModel = PvModel.builder().id(chats.get(2).getId() + 1).first("ali").second("amir").build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
-        Pv pv = Pv.builder().id(pvModel.getId()).first(pvModel.getFirst()).second(pvModel.getSecond()).build();
+        Pv pv = Pv.fromPvModel(pvModel);
         assertThat(pv).isIn(chatRepository.findAll()).isIn(userRepository.findById(pv.getFirst()).get().getChats())
                 .isIn(userRepository.findById(pv.getSecond()).get().getChats());
     }
@@ -350,12 +350,7 @@ class ServerControllerTest {
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
-        Group group = Group.builder()
-                .id(groupModel.getId())
-                .owner(groupModel.getOwner())
-                .members(groupModel.getMembers())
-                .name(groupModel.getName())
-                .build();
+        Group group = Group.fromGroupModel(groupModel);
         assertThat(group).isIn(chatRepository.findAll());
         group.getMembers().forEach(member -> assertThat(group).isIn(userRepository.findById(member).get().getChats()));
     }

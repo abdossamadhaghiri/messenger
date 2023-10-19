@@ -39,4 +39,16 @@ public class Group extends Chat {
                 .messages(messageModels)
                 .build();
     }
+
+    public static Group fromGroupModel(GroupModel groupModel) {
+        List<Message> messages = new ArrayList<>();
+        groupModel.getMessages().forEach(messageModel -> messages.add(Message.fromMessageModel(messageModel)));
+        return Group.builder()
+                .id(groupModel.getId())
+                .owner(groupModel.getOwner())
+                .members(groupModel.getMembers())
+                .name(groupModel.getName())
+                .messages(messages)
+                .build();
+    }
 }
