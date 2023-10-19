@@ -153,8 +153,12 @@ public class CommandProcessor {
     private void chat(Long chatId) {
         boolean flag = true;
         while (flag) {
-            getMessagesInOldChat(chatId).getBody().forEach(this::printMessageInChat);
-
+            ChatModel chat = getChat(chatId);
+            if (chat == null) {
+                System.out.println(Commands.PLEASE_TRY_AGAIN);
+                break;
+            }
+            chat.getMessages().forEach(this::printMessageInChat);
             System.out.println("1. send message\n2. delete message\n3. edit message\n4. forward message\n5. back");
             String option = scanner.nextLine();
             switch (option) {
@@ -212,16 +216,6 @@ public class CommandProcessor {
 
     private boolean canEnterOldChat(Long chatId) {
         return onlineUser.getChats().stream().anyMatch(chat -> chat.getId().equals(chatId));
-    }
-
-    private ResponseEntity<List<MessageModel>> getMessagesInOldChat(Long chatId) {
-        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + onlineUser.getUsername() + SLASH + chatId;
-        return client.get()
-                .uri(url)
-                .retrieve()
-                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                .toEntity(new ParameterizedTypeReference<List<MessageModel>>() {
-                }).block();
     }
 
     private boolean canStartNewChat(String username) {
@@ -443,6 +437,22 @@ public class CommandProcessor {
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(UserModel.class)
+                .block();
+        if (response == null) {
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
+            return null;
+        }
+        return response.getBody();
+    }
+
+    private ChatModel getChat(Long chatId) {
+        String url = UrlPaths.CHATS_URL_PATH + SLASH + chatId;
+        ResponseEntity<ChatModel> response = client.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(ChatModel.class)
                 .block();
         if (response == null) {
             System.out.println(Commands.PLEASE_TRY_AGAIN);
