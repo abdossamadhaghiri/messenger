@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.example.model.ChatModel;
 import org.example.model.GroupModel;
 import org.example.model.MessageModel;
@@ -17,6 +18,7 @@ import java.util.List;
 @AllArgsConstructor
 @Data
 @Entity
+@SuperBuilder
 public class Group extends Chat {
 
     private String owner;
@@ -24,14 +26,6 @@ public class Group extends Chat {
     private List<String> members;
 
     private String name;
-
-    public Group(Long id, String owner, List<String> members, String name, List<Message> messages) {
-        this.setId(id);
-        this.owner = owner;
-        this.members = members;
-        this.name = name;
-        this.setMessages(messages);
-    }
 
     @Override
     public ChatModel toChatModel() {

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.example.model.ChatModel;
 import org.example.model.MessageModel;
 import org.example.model.PvModel;
@@ -17,18 +18,12 @@ import java.util.List;
 @AllArgsConstructor
 @Data
 @Entity
+@SuperBuilder
 public class Pv extends Chat {
 
     private String first;
 
     private String second;
-
-    public Pv(Long id, String first, String second, List<Message> messages) {
-        this.setId(id);
-        this.first = first;
-        this.second = second;
-        this.setMessages(messages);
-    }
 
     @Override
     public ChatModel toChatModel() {
