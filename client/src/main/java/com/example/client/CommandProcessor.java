@@ -7,7 +7,6 @@ import org.example.model.MessageModel;
 import org.example.model.PvModel;
 import org.example.model.UserModel;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -228,7 +227,7 @@ public class CommandProcessor {
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
                 .block();
-        return response != null && response.getStatusCode().equals(HttpStatus.OK);
+        return response != null && response.getStatusCode().equals(HttpStatus.CREATED);
     }
 
     private Long getChatId(String username) {
@@ -286,7 +285,7 @@ public class CommandProcessor {
                 .uri(url)
                 .bodyValue(messageModel)
                 .retrieve()
-                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
                 .block();
         return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
@@ -311,7 +310,7 @@ public class CommandProcessor {
                         .toEntity(String.class)
                         .block();
                 if (response != null) {
-                    if (response.getStatusCode().equals(HttpStatus.BAD_REQUEST)) {
+                    if (!response.getStatusCode().equals(HttpStatus.OK)) {
                         System.out.println(response.getBody());
                     } else {
                         System.out.println(username + " successfully added.");
@@ -336,7 +335,11 @@ public class CommandProcessor {
                 .toEntity(String.class)
                 .block();
         if (response != null) {
-            System.out.println(response.getBody());
+            if (response.getStatusCode().equals(HttpStatus.CREATED)) {
+                System.out.println("the group successfully created!");
+            } else {
+                System.out.println("invalid group content!");
+            }
         } else {
             System.out.println(Commands.PLEASE_TRY_AGAIN);
         }
@@ -352,7 +355,7 @@ public class CommandProcessor {
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
-                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
                 .block();
         if (response == null) {

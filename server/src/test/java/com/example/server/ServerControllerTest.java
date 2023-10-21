@@ -99,14 +99,14 @@ class ServerControllerTest {
         userRepository.save(new User("amin", ServerController.generateToken(), new ArrayList<>()));
         String url = UrlPaths.SIGN_UP_URL_PATH;
         String duplicateUsername = "amin";
-        client.post().uri(url).bodyValue(duplicateUsername).exchange().expectStatus().isBadRequest();
+        client.post().uri(url).bodyValue(duplicateUsername).exchange().expectStatus().is4xxClientError();
     }
 
     @Test
     void signIn_newUsername() {
         String newUsername = "alireza";
         String url = UrlPaths.SIGN_IN_URL_PATH + SLASH + newUsername;
-        client.get().uri(url).exchange().expectStatus().isBadRequest();
+        client.get().uri(url).exchange().expectStatus().isNotFound();
     }
 
     @Test
@@ -121,7 +121,7 @@ class ServerControllerTest {
     void getUser_newUsername() {
         String newUsername = "alireza";
         String url = UrlPaths.USERS_URL_PATH + SLASH + newUsername;
-        client.get().uri(url).exchange().expectStatus().isBadRequest();
+        client.get().uri(url).exchange().expectStatus().isNotFound();
     }
 
     @Test
@@ -144,7 +144,7 @@ class ServerControllerTest {
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
-                .isBadRequest()
+                .isNotFound()
                 .expectBody(String.class)
                 .isEqualTo(Commands.USERNAME_DOESNT_EXIST);
     }
@@ -161,7 +161,7 @@ class ServerControllerTest {
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
-                .isBadRequest()
+                .isNotFound()
                 .expectBody(String.class)
                 .isEqualTo(Commands.CHAT_DOESNT_EXIST);
     }
@@ -178,7 +178,7 @@ class ServerControllerTest {
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
-                .isBadRequest()
+                .isForbidden()
                 .expectBody(String.class)
                 .isEqualTo(Commands.CHAT_IS_NOT_YOUR_CHAT);
     }
@@ -196,7 +196,7 @@ class ServerControllerTest {
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
-                .isBadRequest()
+                .isNotFound()
                 .expectBody(String.class)
                 .isEqualTo(Commands.REPLIED_MESSAGE_DOESNT_EXIST);
     }
@@ -214,7 +214,7 @@ class ServerControllerTest {
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
-                .isBadRequest()
+                .isForbidden()
                 .expectBody(String.class)
                 .isEqualTo(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT);
     }
@@ -232,7 +232,7 @@ class ServerControllerTest {
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
-                .isBadRequest()
+                .isNotFound()
                 .expectBody(String.class)
                 .isEqualTo(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST);
     }
@@ -298,31 +298,49 @@ class ServerControllerTest {
     void testNewPv_invalidFirstUsername() {
         PvModel pvModel = PvModel.builder().first("alireza").second("ali").build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
+        client.post()
+                .uri(url)
+                .bodyValue(pvModel)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectBody(String.class)
+                .isEqualTo(null);
     }
 
     @Test
     void testNewPv_invalidSecondUsername() {
         PvModel pvModel = PvModel.builder().first("ali").second("alireza").build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.USERNAME_DOESNT_EXIST, result.getResponseBody()));
+        client.post()
+                .uri(url)
+                .bodyValue(pvModel)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectBody(String.class)
+                .isEqualTo(null);
     }
 
     @Test
     void testNewPv_duplicateChat() {
         PvModel pvModel = PvModel.builder().first("ali").second("reza").build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.CHAT_ALREADY_EXISTS, result.getResponseBody()));
+        client.post()
+                .uri(url)
+                .bodyValue(pvModel)
+                .exchange()
+                .expectStatus()
+                .is4xxClientError()
+                .expectBody(String.class)
+                .isEqualTo(null);
     }
 
     @Test
     void testNewPv_ok() {
         PvModel pvModel = PvModel.builder().id(chats.get(2).getId() + 1).first("ali").second("amir").build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
+        client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isCreated();
         Pv pv = Pv.fromPvModel(pvModel);
         assertThat(pv).isIn(chatRepository.findAll()).isIn(userRepository.findById(pv.getFirst()).get().getChats())
                 .isIn(userRepository.findById(pv.getSecond()).get().getChats());
@@ -336,8 +354,14 @@ class ServerControllerTest {
                 .name("groupName")
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest().expectBody(String.class).consumeWith(result ->
-                assertEquals(Commands.INVALID_GROUP_CONTENT, result.getResponseBody()));
+        client.post()
+                .uri(url)
+                .bodyValue(groupModel)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectBody(String.class)
+                .isEqualTo(null);
     }
 
     @Test
@@ -349,7 +373,7 @@ class ServerControllerTest {
                 .name("groupName")
                 .build();
         String url = UrlPaths.CHATS_URL_PATH;
-        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
+        client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isCreated();
         Group group = Group.fromGroupModel(groupModel);
         assertThat(group).isIn(chatRepository.findAll());
         group.getMembers().forEach(member -> assertThat(group).isIn(userRepository.findById(member).get().getChats()));
@@ -359,7 +383,7 @@ class ServerControllerTest {
     void testDeleteMessage_invalidToken() {
         Message message = messages.get(2);
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
-        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest()
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isUnauthorized()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.INVALID_TOKEN, result.getResponseBody()));
     }
 
@@ -368,7 +392,7 @@ class ServerControllerTest {
         Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + (message.getId() + 1);
-        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest()
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isNotFound()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
@@ -377,7 +401,7 @@ class ServerControllerTest {
         Message message = messages.get(2);
         User user = userRepository.findById(messages.get(1).getSender()).get();
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
-        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest()
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isForbidden()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
     }
 
@@ -406,7 +430,7 @@ class ServerControllerTest {
               .bodyValue(messageModel)
               .exchange()
               .expectStatus()
-              .isBadRequest()
+              .isUnauthorized()
               .expectBody(String.class)
               .isEqualTo(Commands.INVALID_TOKEN);
     }
@@ -428,7 +452,7 @@ class ServerControllerTest {
               .bodyValue(messageModel)
               .exchange()
               .expectStatus()
-              .isBadRequest()
+              .isNotFound()
               .expectBody(String.class)
               .isEqualTo(Commands.MESSAGE_DOESNT_EXIST);
     }
@@ -450,7 +474,7 @@ class ServerControllerTest {
               .bodyValue(messageModel)
               .exchange()
               .expectStatus()
-              .isBadRequest()
+              .isForbidden()
               .expectBody(String.class)
               .isEqualTo(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE);
     }
@@ -480,7 +504,7 @@ class ServerControllerTest {
     void testGetMessage_invalidToken() {
         Message message = messages.get(2);
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + message.getId();
-        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest();
+        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isUnauthorized();
     }
 
     @Test
@@ -488,7 +512,7 @@ class ServerControllerTest {
         Message message = messages.get(2);
         User sender = userRepository.findById(message.getSender()).get();
         String url = UrlPaths.MESSAGES_URL_PATH + SLASH + (message.getId() + 1);
-        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest();
+        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isNotFound();
     }
 
     @Test
@@ -501,7 +525,7 @@ class ServerControllerTest {
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
               .exchange()
               .expectStatus()
-              .isBadRequest();
+              .isForbidden();
     }
 
     @Test
@@ -527,7 +551,7 @@ class ServerControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
                 .exchange()
                 .expectStatus()
-                .isBadRequest();
+                .isUnauthorized();
     }
 
     @Test
@@ -537,7 +561,7 @@ class ServerControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, userRepository.findById("ali").get().getToken())
                 .exchange()
                 .expectStatus()
-                .isBadRequest();
+                .isNotFound();
     }
 
     @Test
@@ -547,7 +571,7 @@ class ServerControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, userRepository.findById("javad").get().getToken())
                 .exchange()
                 .expectStatus()
-                .isBadRequest();
+                .isForbidden();
     }
 
     @Test

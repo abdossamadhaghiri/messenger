@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @AllArgsConstructor
@@ -42,7 +41,7 @@ public class ServerController {
     @PostMapping("/signUp")
     public ResponseEntity<String> signUp(@RequestBody String username) {
         if (userRepository.existsById(username)) {
-            return new ResponseEntity<>(Commands.USERNAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.USERNAME_ALREADY_EXISTS, HttpStatus.CONFLICT);
         }
         userRepository.save(new User(username, generateToken(), new ArrayList<>()));
         return new ResponseEntity<>(Commands.SUCCESSFULLY_SIGNED_UP, HttpStatus.OK);
@@ -60,25 +59,26 @@ public class ServerController {
     @GetMapping("users/{username}")
     public ResponseEntity<UserModel> getUser(@PathVariable String username) {
         Optional<User> user = userRepository.findById(username);
-        return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
+        return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
     }
 
     @PostMapping("/chats")
-    public ResponseEntity<String> newChat(@RequestBody ChatModel chatModel) {
+    public ResponseEntity<ChatModel> newChat(@RequestBody ChatModel chatModel) {
         if (chatModel instanceof PvModel pvModel) {
             return newPv(pvModel);
         }
         return newGroup(((GroupModel) chatModel));
     }
 
-    private ResponseEntity<String> newPv(PvModel pvModel) {
+    private ResponseEntity<ChatModel> newPv(PvModel pvModel) {
         Optional<User> firstUser = userRepository.findById(pvModel.getFirst());
         Optional<User> secondUser = userRepository.findById(pvModel.getSecond());
         if (firstUser.isEmpty() || secondUser.isEmpty()) {
-            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
         if (getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
-            return new ResponseEntity<>(Commands.CHAT_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(null, HttpStatus.CONFLICT);
         }
         Pv pv = new Pv(pvModel.getFirst(), pvModel.getSecond());
         chatRepository.save(pv);
@@ -86,12 +86,12 @@ public class ServerController {
         secondUser.get().getChats().add(pv);
         userRepository.save(firstUser.get());
         userRepository.save(secondUser.get());
-        return new ResponseEntity<>(Commands.START_YOUR_CHAT, HttpStatus.OK);
+        return new ResponseEntity<>(pv.toChatModel(), HttpStatus.CREATED);
     }
 
-    private ResponseEntity<String> newGroup(GroupModel groupModel) {
+    private ResponseEntity<ChatModel> newGroup(GroupModel groupModel) {
         if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
-            return new ResponseEntity<>(Commands.INVALID_GROUP_CONTENT, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
         Group group = new Group(groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
         chatRepository.save(group);
@@ -100,15 +100,21 @@ public class ServerController {
             user.getChats().add(group);
             userRepository.save(user);
         }
-        return new ResponseEntity<>(Commands.GROUP_SUCCESSFULLY_CREATED, HttpStatus.OK);
+        return new ResponseEntity<>(group.toChatModel(), HttpStatus.CREATED);
     }
 
     @GetMapping("/chats/{chatId}")
     public ResponseEntity<ChatModel> getChat(@PathVariable Long chatId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         Optional<Chat> chat = chatRepository.findById(chatId);
-        if (user.isEmpty() || chat.isEmpty() || !user.get().getChats().contains(chat.get())) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+        if (chat.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+        if (!user.get().getChats().contains(chat.get())) {
+            return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(chat.get().toChatModel(), HttpStatus.OK);
     }
@@ -128,24 +134,24 @@ public class ServerController {
     public ResponseEntity<String> newMessage(@RequestBody MessageModel messageModel) {
         Optional<User> sender = userRepository.findById(messageModel.getSender());
         if (sender.isEmpty()) {
-            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
         Optional<Chat> chat = chatRepository.findById(messageModel.getChatId());
         if (chat.isEmpty()) {
-            return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
         if (!sender.get().getChats().contains(chat.get())) {
-            return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.FORBIDDEN);
         }
         Optional<Message> repliedMessage = messageRepository.findById(messageModel.getRepliedMessageId());
         if (!messageModel.getRepliedMessageId().equals(0L) && repliedMessage.isEmpty()) {
-            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
         if (repliedMessage.isPresent() && !messageModel.getChatId().equals(repliedMessage.get().getChatId())) {
-            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.FORBIDDEN);
         }
         if (messageModel.getForwardedFrom() != null && !userRepository.existsById(messageModel.getForwardedFrom())) {
-            return new ResponseEntity<>(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
         Message message = Message.builder()
                 .text(messageModel.getText())
@@ -165,13 +171,13 @@ public class ServerController {
         Optional<Message> message = messageRepository.findById(messageId);
         Optional<User> user = userRepository.findByToken(token);
         if (user.isEmpty()) {
-            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
         }
         if (message.isEmpty()) {
-            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
         if (!message.get().getSender().equals(user.get().getUsername())) {
-            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.FORBIDDEN);
         }
         messageRepository.deleteById(messageId);
         return new ResponseEntity<>(Commands.MESSAGE_DELETED, HttpStatus.OK);
@@ -182,14 +188,14 @@ public class ServerController {
                                               @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         if (user.isEmpty()) {
-            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
         }
         Optional<Message> message = messageRepository.findById(messageId);
         if (message.isEmpty()) {
-            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
         if (!message.get().getSender().equals(user.get().getUsername())) {
-            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.FORBIDDEN);
         }
         message.get().setText(messageModel.getText());
         messageRepository.save(message.get());
@@ -200,8 +206,14 @@ public class ServerController {
     public ResponseEntity<Message> getMessage(@PathVariable Long messageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         Optional<Message> message = messageRepository.findById(messageId);
-        if (user.isEmpty() || message.isEmpty() || !user.get().getChats().contains(chatRepository.findById(message.get().getChatId()).get())) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+        if (message.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+        if (!user.get().getChats().contains(chatRepository.findById(message.get().getChatId()).get())) {
+            return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(message.get(), HttpStatus.OK);
     }
