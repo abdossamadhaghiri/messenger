@@ -300,40 +300,30 @@ public class CommandProcessor {
         while (flag) {
             System.out.println("1. add member\n2. create");
             String option = scanner.nextLine();
-            if (option.equals("1")) {
-                System.out.println("enter the username:");
-                String username = scanner.nextLine();
-                String url = UrlPaths.USERS_URL_PATH + SLASH + username;
-                ResponseEntity<String> response = client.get()
-                        .uri(url)
-                        .retrieve()
-                        .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                        .toEntity(String.class)
-                        .block();
-                if (response != null) {
-                    if (!response.getStatusCode().equals(HttpStatus.OK)) {
-                        System.out.println(response.getBody());
-                    } else {
+            switch (option) {
+                case "1" -> {
+                    System.out.println("enter the username:");
+                    String username = scanner.nextLine();
+                    UserModel userModel = getUser(username);
+                    if (userModel != null) {
                         System.out.println(username + " successfully added.");
                         members.add(username);
+                    } else {
+                        System.out.println(Commands.USERNAME_DOESNT_EXIST);
                     }
-                } else {
-                    System.out.println(Commands.PLEASE_TRY_AGAIN);
                 }
-            } else if (option.equals("2")) {
-                flag = false;
-            } else {
-                System.out.println(Commands.INVALID_COMMAND);
+                case "2" -> flag = false;
+                default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
         members.add(onlineUser.getUsername());
         String url = UrlPaths.CHATS_URL_PATH;
         GroupModel groupModel = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
-        ResponseEntity<String> response = client.post()
+        ResponseEntity<GroupModel> response = client.post()
                 .uri(url)
                 .bodyValue(groupModel)
                 .retrieve()
-                .toEntity(String.class)
+                .toEntity(GroupModel.class)
                 .block();
         if (response != null) {
             if (response.getStatusCode().equals(HttpStatus.CREATED)) {
