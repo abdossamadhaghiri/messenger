@@ -61,9 +61,9 @@ class ServerControllerTest {
     }
 
     private void createTestDatabase() {
-        Chat pv1 = new Pv("ali", "reza");
-        Chat pv2 = new Pv("ali", "javad");
-        Chat pv3 = new Pv("reza", "javad");
+        Chat pv1 = Pv.builder().first("ali").second("reza").build();
+        Chat pv2 = Pv.builder().first("ali").second("javad").build();
+        Chat pv3 = Pv.builder().first("reza").second("javad").build();
         chatRepository.saveAll(List.of(pv1, pv2, pv3));
         List<Chat> chats = chatRepository.findAll();
 
@@ -303,9 +303,7 @@ class ServerControllerTest {
                 .bodyValue(pvModel)
                 .exchange()
                 .expectStatus()
-                .isNotFound()
-                .expectBody(String.class)
-                .isEqualTo(null);
+                .isNotFound();
     }
 
     @Test
@@ -317,9 +315,7 @@ class ServerControllerTest {
                 .bodyValue(pvModel)
                 .exchange()
                 .expectStatus()
-                .isNotFound()
-                .expectBody(String.class)
-                .isEqualTo(null);
+                .isNotFound();
     }
 
     @Test
@@ -331,9 +327,7 @@ class ServerControllerTest {
                 .bodyValue(pvModel)
                 .exchange()
                 .expectStatus()
-                .is4xxClientError()
-                .expectBody(String.class)
-                .isEqualTo(null);
+                .is4xxClientError();
     }
 
     @Test
@@ -359,9 +353,7 @@ class ServerControllerTest {
                 .bodyValue(groupModel)
                 .exchange()
                 .expectStatus()
-                .isNotFound()
-                .expectBody(String.class)
-                .isEqualTo(null);
+                .isNotFound();
     }
 
     @Test

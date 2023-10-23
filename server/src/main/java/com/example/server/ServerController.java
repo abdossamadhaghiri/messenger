@@ -80,7 +80,7 @@ public class ServerController {
         if (getPvByUsernames(pvModel.getFirst(), pvModel.getSecond()) != null) {
             return new ResponseEntity<>(null, HttpStatus.CONFLICT);
         }
-        Pv pv = new Pv(pvModel.getFirst(), pvModel.getSecond());
+        Pv pv = Pv.builder().first(pvModel.getFirst()).second(pvModel.getSecond()).build();
         chatRepository.save(pv);
         firstUser.get().getChats().add(pv);
         secondUser.get().getChats().add(pv);
@@ -93,7 +93,11 @@ public class ServerController {
         if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-        Group group = new Group(groupModel.getOwner(), groupModel.getMembers(), groupModel.getName());
+        Group group = Group.builder()
+                .owner(groupModel.getOwner())
+                .members(groupModel.getMembers())
+                .name(groupModel.getName())
+                .build();
         chatRepository.save(group);
         for (String member : group.getMembers()) {
             User user = userRepository.findById(member).get();
