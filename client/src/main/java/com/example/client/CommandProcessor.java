@@ -296,6 +296,7 @@ public class CommandProcessor {
         System.out.println("enter name of your group:");
         String name = scanner.nextLine();
         List<String> members = new ArrayList<>();
+        members.add(onlineUser.getUsername());
         boolean flag = true;
         while (flag) {
             System.out.println("1. add member\n2. create");
@@ -305,18 +306,19 @@ public class CommandProcessor {
                     System.out.println("enter the username:");
                     String username = scanner.nextLine();
                     UserModel userModel = getUser(username);
-                    if (userModel != null) {
+                    if (userModel == null) {
+                        System.out.println(Commands.USERNAME_DOESNT_EXIST);
+                    } else if (members.contains(username)) {
+                        System.out.println("already joined!");
+                    } else {
                         System.out.println(username + " successfully added.");
                         members.add(username);
-                    } else {
-                        System.out.println(Commands.USERNAME_DOESNT_EXIST);
                     }
                 }
                 case "2" -> flag = false;
                 default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
-        members.add(onlineUser.getUsername());
         String url = UrlPaths.CHATS_URL_PATH;
         GroupModel groupModel = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
         ResponseEntity<GroupModel> response = client.post()
