@@ -69,13 +69,13 @@ public class CommandProcessor {
             }
             onlineUser = userModel;
             showChatList(onlineUser.getChats());
-            System.out.println("1. select chat\n2. enter a username to start chat\n3. create a group\n4. logout");
+            System.out.println("1. select chat\n2. enter a username\n3. create a group\n4. logout");
             String option = scanner.nextLine();
             switch (option) {
                 case "1" -> {
                     System.out.println("enter your chat id:");
                     String input = scanner.nextLine();
-                    if (isNumeric(input) && canEnterOldChat(Long.valueOf(input))) {
+                    if (isNumeric(input) && isOldChat(Long.valueOf(input))) {
                         chat(Long.valueOf(input));
                     } else {
                         System.out.println(Commands.INVALID_CHAT_ID);
@@ -84,11 +84,16 @@ public class CommandProcessor {
                 case "2" -> {
                     System.out.println("enter your username:");
                     String username = scanner.nextLine();
-                    if (canStartNewChat(username)) {
-                        Long newChatId = getChatId(username);
-                        chat(newChatId);
+                    UserModel peer = getUser(username);
+                    if (peer != null) {
+                        Long chatId = getChatId(username);
+                        if (chatId != -1L) {
+                            chat(chatId);
+                        } else {
+                            System.out.println(Commands.PLEASE_TRY_AGAIN);
+                        }
                     } else {
-                        System.out.println("the username doesnt exist!");
+                        System.out.println(Commands.USERNAME_DOESNT_EXIST);
                     }
                 }
                 case "3" -> createGroup();
@@ -213,33 +218,29 @@ public class CommandProcessor {
         return Pattern.matches("\\d+", input);
     }
 
-    private boolean canEnterOldChat(Long chatId) {
+    private boolean isOldChat(Long chatId) {
         return onlineUser.getChats().stream().anyMatch(chat -> chat.getId().equals(chatId));
     }
 
-    private boolean canStartNewChat(String username) {
-        String url = UrlPaths.CHATS_URL_PATH;
-        PvModel pvModel = PvModel.builder().first(onlineUser.getUsername()).second(username).build();
-        ResponseEntity<String> response = client.post()
-                .uri(url)
-                .bodyValue(pvModel)
-                .retrieve()
-                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                .toEntity(String.class)
-                .block();
-        return response != null && response.getStatusCode().equals(HttpStatus.CREATED);
-    }
-
     private Long getChatId(String username) {
-        UserModel userModel = getUser(onlineUser.getUsername());
-        if (userModel != null) {
-            for (ChatModel chat : userModel.getChats()) {
-                if (chat instanceof PvModel pv && (pv.getFirst().equals(username) || pv.getSecond().equals(username))) {
-                    return pv.getId();
-                }
+        for (ChatModel chat : onlineUser.getChats()) {
+            if (chat instanceof PvModel pv && getPeer(pv).equals(username)) {
+                return pv.getId();
             }
         }
-        return -1L;
+        PvModel newPv = createNewPv(username);
+        return newPv != null ? newPv.getId() : -1L;
+    }
+
+    private PvModel createNewPv(String peerUsername) {
+        PvModel pvModel = PvModel.builder().first(onlineUser.getUsername()).second(peerUsername).build();
+        ResponseEntity<PvModel> response = client.post()
+                .uri(UrlPaths.CHATS_URL_PATH)
+                .bodyValue(pvModel)
+                .retrieve()
+                .toEntity(PvModel.class)
+                .block();
+        return response != null ? response.getBody() : null;
     }
 
     private String recognizeSender(String sender) {
@@ -398,7 +399,7 @@ public class CommandProcessor {
             case "1" -> {
                 System.out.println("enter your chat id:");
                 String input = scanner.nextLine();
-                if (isNumeric(input) && canEnterOldChat(Long.valueOf(input))) {
+                if (isNumeric(input) && isOldChat(Long.valueOf(input))) {
                     Long destinationChatId = Long.valueOf(input);
                     System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
                 } else {
@@ -408,9 +409,16 @@ public class CommandProcessor {
             case "2" -> {
                 System.out.println("enter the username:");
                 String username = scanner.nextLine();
-                if (canStartNewChat(username)) {
+                UserModel peer = getUser(username);
+                if (peer != null) {
                     Long destinationChatId = getChatId(username);
-                    System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+                    if (destinationChatId != -1L) {
+                        System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+                    } else {
+                        System.out.println(Commands.PLEASE_TRY_AGAIN);
+                    }
+                } else {
+                    System.out.println(Commands.USERNAME_DOESNT_EXIST);
                 }
             }
             default -> System.out.println(Commands.INVALID_COMMAND);
