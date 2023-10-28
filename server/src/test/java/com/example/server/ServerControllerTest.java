@@ -1,16 +1,19 @@
 package com.example.server;
 
-import com.example.server.entity.Message;
+import com.example.server.entity.GroupMessage;
 import com.example.server.entity.Pv;
 import com.example.server.entity.Group;
+import com.example.server.entity.PvMessage;
 import com.example.server.entity.User;
+import com.example.server.repository.GroupMessageRepository;
 import com.example.server.repository.GroupRepository;
-import com.example.server.repository.MessageRepository;
+import com.example.server.repository.PvMessageRepository;
 import com.example.server.repository.PvRepository;
 import com.example.server.repository.UserRepository;
 import org.example.UrlPaths;
+import org.example.model.GroupMessageModel;
 import org.example.model.GroupModel;
-import org.example.model.MessageModel;
+import org.example.model.PvMessageModel;
 import org.example.model.PvModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +40,10 @@ class ServerControllerTest {
     private UserRepository userRepository;
 
     @Autowired
-    private MessageRepository messageRepository;
+    private PvMessageRepository pvMessageRepository;
+
+    @Autowired
+    private GroupMessageRepository groupMessageRepository;
 
     @Autowired
     private PvRepository pvRepository;
@@ -47,7 +53,8 @@ class ServerControllerTest {
 
     private List<Pv> pvs;
     private List<Group> groups;
-    private List<Message> messages;
+    private List<PvMessage> pvMessages;
+    private List<GroupMessage> groupMessages;
 
     @BeforeEach
     public void setUpTestDatabase() {
@@ -55,38 +62,58 @@ class ServerControllerTest {
         createTestDatabase();
         pvs = pvRepository.findAll();
         groups = groupRepository.findAll();
-        messages = messageRepository.findAll();
+        pvMessages = pvMessageRepository.findAll();
+        groupMessages = groupMessageRepository.findAll();
     }
 
     private void clearDatabase() {
-        messageRepository.deleteAll();
+        pvMessageRepository.deleteAll();
+        groupMessageRepository.deleteAll();;
         userRepository.deleteAll();
         pvRepository.deleteAll();
         groupRepository.deleteAll();
     }
 
     private void createTestDatabase() {
-        Pv pv1 = new Pv("ali", "reza");
-        Pv pv2 = new Pv("ali", "javad");
-        Pv pv3 = new Pv("reza", "javad");
+        Pv pv1 = Pv.builder().first("ali").second("reza").build();
+        Pv pv2 = Pv.builder().first("ali").second("javad").build();
+        Pv pv3 = Pv.builder().first("reza").second("javad").build();
         pvRepository.saveAll(List.of(pv1, pv2, pv3));
         pvs = pvRepository.findAll();
 
-        Message message1 = Message.builder().id(1L).text("aaa").sender("ali").chatId(pvs.get(0).getId()).build();
-        Message message2 = Message.builder().id(2L).text("bbb").sender("ali").chatId(pvs.get(1).getId()).build();
-        Message message3 = Message.builder().id(3L).text("ccc").sender("reza").chatId(pvs.get(2).getId()).build();
+        Group group1 = Group.builder().owner("ali").members(new ArrayList<>(List.of("ali", "reza"))).name("group1").build();
+        Group group2 = Group.builder().owner("javad").members(new ArrayList<>(List.of("javad", "ali"))).name("group2").build();
+        Group group3 = Group.builder().owner("reza").members(new ArrayList<>(List.of("reza", "javad"))).name("group3").build();
+        groupRepository.saveAll(List.of(group1, group2, group3));
+        groups = groupRepository.findAll();
 
-        Pv aliRezaChat = pvs.get(0);
-        Pv aliJavadChat = pvs.get(1);
-        Pv rezaJavadChat = pvs.get(2);
-        aliRezaChat.getMessages().add(message1);
-        aliJavadChat.getMessages().add(message2);
-        rezaJavadChat.getMessages().add(message3);
-        pvRepository.saveAll(List.of(aliRezaChat, aliJavadChat, rezaJavadChat));
+        PvMessage pvMessage1 = PvMessage.builder().id(1L).text("aaa").sender("ali").pvId(pvs.get(0).getId()).build();
+        PvMessage pvMessage2 = PvMessage.builder().id(2L).text("bbb").sender("ali").pvId(pvs.get(1).getId()).build();
+        PvMessage pvMessage3 = PvMessage.builder().id(3L).text("ccc").sender("reza").pvId(pvs.get(2).getId()).build();
 
-        User ali = new User("ali", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, aliJavadChat)), new ArrayList<>());
-        User reza = new User("reza", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaChat, rezaJavadChat)), new ArrayList<>());
-        User javad = new User("javad", ServerController.generateToken(), new ArrayList<>(List.of(aliJavadChat, rezaJavadChat)), new ArrayList<>());
+        GroupMessage groupMessage1 = GroupMessage.builder().text("gm1").sender("ali").groupId(groups.get(0).getId()).build();
+        GroupMessage groupMessage2 = GroupMessage.builder().text("gm2").sender("javad").groupId(groups.get(1).getId()).build();
+        GroupMessage groupMessage3 = GroupMessage.builder().text("gm3").sender("reza").groupId(groups.get(2).getId()).build();
+
+        Group aliRezaGroup = groups.get(0);
+        Group javadAliGroup = groups.get(1);
+        Group rezaJavadGroup = groups.get(2);
+        aliRezaGroup.getGroupMessages().add(groupMessage1);
+        rezaJavadGroup.getGroupMessages().add(groupMessage2);
+        javadAliGroup.getGroupMessages().add(groupMessage3);
+        groupRepository.saveAll(List.of(aliRezaGroup, rezaJavadGroup, javadAliGroup));
+
+        Pv aliRezaPv = pvs.get(0);
+        Pv aliJavadPv = pvs.get(1);
+        Pv rezaJavadPv = pvs.get(2);
+        aliRezaPv.getPvMessages().add(pvMessage1);
+        aliJavadPv.getPvMessages().add(pvMessage2);
+        rezaJavadPv.getPvMessages().add(pvMessage3);
+        pvRepository.saveAll(List.of(aliRezaPv, aliJavadPv, rezaJavadPv));
+
+        User ali = new User("ali", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaPv, aliJavadPv)), new ArrayList<>(List.of(aliRezaGroup, javadAliGroup)));
+        User reza = new User("reza", ServerController.generateToken(), new ArrayList<>(List.of(aliRezaPv, rezaJavadPv)), new ArrayList<>(List.of(aliRezaGroup, rezaJavadGroup)));
+        User javad = new User("javad", ServerController.generateToken(), new ArrayList<>(List.of(aliJavadPv, rezaJavadPv)), new ArrayList<>(List.of(rezaJavadGroup, javadAliGroup)));
         User amir = new User("amir", ServerController.generateToken(), new ArrayList<>(), new ArrayList<>());
         userRepository.saveAll(List.of(ali, reza, javad, amir));
     }
@@ -123,15 +150,15 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_invalidSender() {
-        MessageModel messageModel = MessageModel.builder()
+    void newPvMessage_invalidSender() {
+        PvMessageModel pvMessageModel = PvMessageModel.builder()
                 .text("hello javad!")
                 .sender("alireza")
-                .chatId(pvs.get(1).getId())
+                .pvId(pvs.get(1).getId())
                 .build();
         client.post()
-                .uri(UrlPaths.MESSAGES_URL_PATH)
-                .bodyValue(messageModel)
+                .uri(UrlPaths.PV_MESSAGES_URL_PATH)
+                .bodyValue(pvMessageModel)
                 .exchange()
                 .expectStatus()
                 .isBadRequest()
@@ -140,14 +167,14 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_chatDoesntExists() {
-        MessageModel messageModel = MessageModel.builder()
+    void newPvMessage_chatDoesntExists() {
+        PvMessageModel messageModel = PvMessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(2).getId() + 1)
+                .pvId(pvs.get(2).getId() + 1)
                 .build();
         client.post()
-                .uri(UrlPaths.MESSAGES_URL_PATH)
+                .uri(UrlPaths.PV_MESSAGES_URL_PATH)
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
@@ -157,14 +184,14 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_chatIsNotInSendersChat() {
-        MessageModel messageModel = MessageModel.builder()
+    void newPvMessage_chatIsNotInSendersChat() {
+        PvMessageModel messageModel = PvMessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(2).getId())
+                .pvId(pvs.get(2).getId())
                 .build();
         client.post()
-                .uri(UrlPaths.MESSAGES_URL_PATH)
+                .uri(UrlPaths.PV_MESSAGES_URL_PATH)
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
@@ -174,15 +201,15 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_repliedMessageDoesntExists() {
-        MessageModel messageModel = MessageModel.builder()
+    void newPvMessage_repliedMessageDoesntExists() {
+        PvMessageModel messageModel = PvMessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
-                .repliedMessageId(messages.get(2).getId() + 1)
+                .pvId(pvs.get(1).getId())
+                .repliedMessageId(pvMessages.get(2).getId() + 1)
                 .build();
         client.post()
-                .uri(UrlPaths.MESSAGES_URL_PATH)
+                .uri(UrlPaths.PV_MESSAGES_URL_PATH)
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
@@ -192,15 +219,15 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_repliedMessageIsNotInThisChat() {
-        MessageModel messageModel = MessageModel.builder()
+    void newPvMessage_repliedMessageIsNotInThisChat() {
+        PvMessageModel messageModel = PvMessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
-                .repliedMessageId(messages.get(2).getId())
+                .pvId(pvs.get(1).getId())
+                .repliedMessageId(pvMessages.get(2).getId())
                 .build();
         client.post()
-                .uri(UrlPaths.MESSAGES_URL_PATH)
+                .uri(UrlPaths.PV_MESSAGES_URL_PATH)
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
@@ -210,15 +237,15 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_forwardedFromUsernameDoesntExist() {
-        MessageModel messageModel = MessageModel.builder()
+    void newPvMessage_forwardedFromUsernameDoesntExist() {
+        PvMessageModel messageModel = PvMessageModel.builder()
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
+                .pvId(pvs.get(1).getId())
                 .forwardedFrom("alireza")
                 .build();
         client.post()
-                .uri(UrlPaths.MESSAGES_URL_PATH)
+                .uri(UrlPaths.PV_MESSAGES_URL_PATH)
                 .bodyValue(messageModel)
                 .exchange()
                 .expectStatus()
@@ -228,60 +255,222 @@ class ServerControllerTest {
     }
 
     @Test
-    void newMessage_ok_notReply_notForward() {
-        MessageModel messageModel = MessageModel.builder()
-                .id(messages.get(2).getId() + 1)
+    void newPvMessage_ok_notReply_notForward() {
+        PvMessageModel messageModel = PvMessageModel.builder()
+                .id(pvMessages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
+                .pvId(pvs.get(1).getId())
                 .build();
-        String url = UrlPaths.MESSAGES_URL_PATH;
+        String url = UrlPaths.PV_MESSAGES_URL_PATH;
         client.post().uri(url).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
+        PvMessage pvMessage = PvMessage.fromPvMessageModel(messageModel);
+        assertThat(pvMessage).isIn(pvMessageRepository.findAll()).isIn(pvRepository.findById(pvMessage.getPvId()).get().getPvMessages());
     }
 
     @Test
-    void newMessage_ok_reply_notForward() {
-        MessageModel messageModel = MessageModel.builder()
-                .id(messages.get(2).getId() + 1)
+    void newPvMessage_ok_reply_notForward() {
+        PvMessageModel messageModel = PvMessageModel.builder()
+                .id(pvMessages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
-                .repliedMessageId(messages.get(1).getId())
+                .pvId(pvs.get(1).getId())
+                .repliedMessageId(pvMessages.get(1).getId())
                 .build();
-        client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
+        client.post().uri(UrlPaths.PV_MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
+        PvMessage pvMessage = PvMessage.fromPvMessageModel(messageModel);
+        assertThat(pvMessage).isIn(pvMessageRepository.findAll()).isIn(pvRepository.findById(pvMessage.getPvId()).get().getPvMessages());
     }
 
     @Test
-    void newMessage_ok_notReply_forward() {
-        MessageModel messageModel = MessageModel.builder()
-                .id(messages.get(2).getId() + 1)
+    void newPvMessage_ok_notReply_forward() {
+        PvMessageModel messageModel = PvMessageModel.builder()
+                .id(pvMessages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
+                .pvId(pvs.get(1).getId())
                 .forwardedFrom("javad")
                 .build();
-        client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
+        client.post().uri(UrlPaths.PV_MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
+        PvMessage pvMessage = PvMessage.fromPvMessageModel(messageModel);
+        assertThat(pvMessage).isIn(pvMessageRepository.findAll()).isIn(pvRepository.findById(pvMessage.getPvId()).get().getPvMessages());
     }
 
     @Test
-    void newMessage_ok_reply_forward() {
-        MessageModel messageModel = MessageModel.builder()
-                .id(messages.get(2).getId() + 1)
+    void newPvMessage_ok_reply_forward() {
+        PvMessageModel messageModel = PvMessageModel.builder()
+                .id(pvMessages.get(2).getId() + 1)
                 .text("hello javad!")
                 .sender("ali")
-                .chatId(pvs.get(1).getId())
-                .repliedMessageId(messages.get(1).getId())
+                .pvId(pvs.get(1).getId())
+                .repliedMessageId(pvMessages.get(1).getId())
                 .forwardedFrom("javad")
                 .build();
-        client.post().uri(UrlPaths.MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
-        Message message = Message.fromMessageModel(messageModel);
-        assertThat(message).isIn(messageRepository.findAll()).isIn(pvRepository.findById(message.getChatId()).get().getMessages());
+        client.post().uri(UrlPaths.PV_MESSAGES_URL_PATH).bodyValue(messageModel).exchange().expectStatus().isOk();
+        PvMessage pvMessage = PvMessage.fromPvMessageModel(messageModel);
+        assertThat(pvMessage).isIn(pvMessageRepository.findAll()).isIn(pvRepository.findById(pvMessage.getPvId()).get().getPvMessages());
+    }
+
+    @Test
+    void newGroupMessage_invalidSender() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text("hello javad!")
+                .sender("alireza")
+                .groupId(groups.get(1).getId())
+                .build();
+        client.post()
+                .uri(UrlPaths.GROUP_MESSAGES_URL_PATH)
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.USERNAME_DOESNT_EXIST);
+    }
+
+    @Test
+    void newGroupMessage_chatDoesntExists() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(2).getId() + 1)
+                .build();
+        client.post()
+                .uri(UrlPaths.GROUP_MESSAGES_URL_PATH)
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.CHAT_DOESNT_EXIST);
+    }
+
+    @Test
+    void newGroupMessage_chatIsNotInSendersChat() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(2).getId())
+                .build();
+        client.post()
+                .uri(UrlPaths.GROUP_MESSAGES_URL_PATH)
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.CHAT_IS_NOT_YOUR_CHAT);
+    }
+
+    @Test
+    void newGroupMessage_repliedMessageDoesntExists() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .repliedMessageId(groupMessages.get(2).getId() + 1)
+                .build();
+        client.post()
+                .uri(UrlPaths.GROUP_MESSAGES_URL_PATH)
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.REPLIED_MESSAGE_DOESNT_EXIST);
+    }
+
+    @Test
+    void newGroupMessage_repliedMessageIsNotInThisChat() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .repliedMessageId(groupMessages.get(2).getId())
+                .build();
+        client.post()
+                .uri(UrlPaths.GROUP_MESSAGES_URL_PATH)
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT);
+    }
+
+    @Test
+    void newGroupMessage_forwardedFromUsernameDoesntExist() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .forwardedFrom("alireza")
+                .build();
+        client.post()
+                .uri(UrlPaths.GROUP_MESSAGES_URL_PATH)
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST);
+    }
+
+    @Test
+    void newGroupMessage_ok_notReply_notForward() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .build();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH;
+        client.post().uri(url).bodyValue(groupMessageModel).exchange().expectStatus().isOk();
+        GroupMessage groupMessage = GroupMessage.fromGroupMessageModel(groupMessageModel);
+        assertThat(groupMessage).isIn(groupMessageRepository.findAll()).isIn(groupRepository.findById(groupMessage.getGroupId()).get().getGroupMessages());
+    }
+
+    @Test
+    void newGroupMessage_ok_reply_notForward() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .repliedMessageId(groupMessages.get(1).getId())
+                .build();
+        client.post().uri(UrlPaths.GROUP_MESSAGES_URL_PATH).bodyValue(groupMessageModel).exchange().expectStatus().isOk();
+        GroupMessage groupMessage = GroupMessage.fromGroupMessageModel(groupMessageModel);
+        assertThat(groupMessage).isIn(groupMessageRepository.findAll()).isIn(groupRepository.findById(groupMessage.getGroupId()).get().getGroupMessages());
+    }
+
+    @Test
+    void newGroupMessage_ok_notReply_forward() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .forwardedFrom("javad")
+                .build();
+        client.post().uri(UrlPaths.GROUP_MESSAGES_URL_PATH).bodyValue(groupMessageModel).exchange().expectStatus().isOk();
+        GroupMessage groupMessage = GroupMessage.fromGroupMessageModel(groupMessageModel);
+        assertThat(groupMessage).isIn(groupMessageRepository.findAll()).isIn(groupRepository.findById(groupMessage.getGroupId()).get().getGroupMessages());
+    }
+
+    @Test
+    void newGroupMessage_ok_reply_forward() {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessages.get(2).getId() + 1)
+                .text("hello javad!")
+                .sender("ali")
+                .groupId(groups.get(1).getId())
+                .repliedMessageId(groupMessages.get(1).getId())
+                .forwardedFrom("javad")
+                .build();
+        client.post().uri(UrlPaths.GROUP_MESSAGES_URL_PATH).bodyValue(groupMessageModel).exchange().expectStatus().isOk();
+        GroupMessage groupMessage = GroupMessage.fromGroupMessageModel(groupMessageModel);
+        assertThat(groupMessage).isIn(groupMessageRepository.findAll()).isIn(groupRepository.findById(groupMessage.getGroupId()).get().getGroupMessages());
     }
 
     @Test
@@ -320,7 +509,6 @@ class ServerControllerTest {
                 .id(pvs.get(2).getId() + 1)
                 .first("ali")
                 .second("amir")
-                .messages(new ArrayList<>())
                 .build();
         String url = UrlPaths.PVS_URL_PATH;
         client.post().uri(url).bodyValue(pvModel).exchange().expectStatus().isOk();
@@ -335,7 +523,6 @@ class ServerControllerTest {
                 .owner("ali")
                 .members(new ArrayList<>(List.of("ali", "reza", "alireza")))
                 .name("groupName")
-                .messages(new ArrayList<>())
                 .build();
         String url = UrlPaths.GROUPS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isBadRequest();
@@ -348,7 +535,6 @@ class ServerControllerTest {
                 .owner("ali")
                 .members(new ArrayList<>(List.of("ali", "reza", "javad")))
                 .name("groupName")
-                .messages(new ArrayList<>())
                 .build();
         String url = UrlPaths.GROUPS_URL_PATH;
         client.post().uri(url).bodyValue(groupModel).exchange().expectStatus().isOk();
@@ -358,54 +544,90 @@ class ServerControllerTest {
     }
 
     @Test
-    void testDeleteMessage_invalidToken() {
-        Message message = messages.get(2);
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+    void deletePvMessage_invalidToken() {
+        PvMessage pvMessage = pvMessages.get(2);
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.INVALID_TOKEN, result.getResponseBody()));
     }
 
     @Test
-    void testDeleteMessage_messageDoesntExists() {
-        Message message = messages.get(2);
-        User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + (message.getId() + 1);
+    void deletePvMessage_messageDoesntExists() {
+        PvMessage pvMessage = pvMessages.get(2);
+        User sender = userRepository.findById(pvMessage.getSender()).get();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + (pvMessage.getId() + 1);
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
     }
 
     @Test
-    void testDeleteMessage_messageDoesntYourMessage() {
-        Message message = messages.get(2);
-        User user = userRepository.findById(messages.get(1).getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+    void deletePvMessage_messageDoesntYourMessage() {
+        PvMessage pvMessage = pvMessages.get(2);
+        User user = userRepository.findById(pvMessages.get(1).getSender()).get();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest()
                 .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
     }
 
     @Test
-    void testDeleteMessage_ok() {
-        Message message = messages.get(2);
-        User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+    void deletePvMessage_ok() {
+        PvMessage pvMessage = pvMessages.get(2);
+        User sender = userRepository.findById(pvMessage.getSender()).get();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk();
-        assertThat(message).isNotIn(messageRepository.findAll()).isNotIn(pvRepository.findById(message.getChatId()).get().getMessages());
+        assertThat(pvMessage).isNotIn(pvMessageRepository.findAll()).isNotIn(pvRepository.findById(pvMessage.getPvId()).get().getPvMessages());
     }
 
     @Test
-    void editMessage_invalidToken() {
-        Message message = messages.get(2);
-        MessageModel messageModel = MessageModel.builder()
-                                                .id(message.getId())
+    void deleteGroupMessage_invalidToken() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest()
+                .expectBody(String.class).consumeWith(result -> assertEquals(Commands.INVALID_TOKEN, result.getResponseBody()));
+    }
+
+    @Test
+    void deleteGroupMessage_messageDoesntExists() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User sender = userRepository.findById(groupMessage.getSender()).get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + (groupMessage.getId() + 1);
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest()
+                .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_DOESNT_EXIST, result.getResponseBody()));
+    }
+
+    @Test
+    void deleteGroupMessage_messageDoesntYourMessage() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User user = userRepository.findById(groupMessages.get(1).getSender()).get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, user.getToken()).exchange().expectStatus().isBadRequest()
+                .expectBody(String.class).consumeWith(result -> assertEquals(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, result.getResponseBody()));
+    }
+
+    @Test
+    void deleteGroupMessage_ok() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User sender = userRepository.findById(groupMessage.getSender()).get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.delete().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isOk();
+        assertThat(groupMessage).isNotIn(groupMessageRepository.findAll())
+                .isNotIn(groupRepository.findById(groupMessage.getGroupId()).get().getGroupMessages());
+    }
+
+    @Test
+    void editPvMessage_invalidToken() {
+        PvMessage pvMessage = pvMessages.get(2);
+        PvMessageModel pvMessageModel = PvMessageModel.builder()
+                                                .id(pvMessage.getId())
                                                 .text("edited text!")
-                                                .sender(message.getSender())
-                                                .chatId(message.getChatId())
+                                                .sender(pvMessage.getSender())
+                                                .pvId(pvMessage.getPvId())
                                                 .build();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
-              .bodyValue(messageModel)
+              .bodyValue(pvMessageModel)
               .exchange()
               .expectStatus()
               .isBadRequest()
@@ -414,20 +636,20 @@ class ServerControllerTest {
     }
 
     @Test
-    void editMessage_messageDoesntExists() {
-        Message message = messages.get(2);
-        User sender = userRepository.findById(message.getSender()).get();
-        MessageModel messageModel = MessageModel.builder()
-                                                .id(message.getId())
+    void editPvMessage_messageDoesntExists() {
+        PvMessage pvMessage = pvMessages.get(2);
+        User sender = userRepository.findById(pvMessage.getSender()).get();
+        PvMessageModel pvMessageModel = PvMessageModel.builder()
+                                                .id(pvMessage.getId())
                                                 .text("edited text!")
-                                                .sender(message.getSender())
-                                                .chatId(message.getChatId())
+                                                .sender(pvMessage.getSender())
+                                                .pvId(pvMessage.getPvId())
                                                 .build();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + (message.getId() + 1);
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + (pvMessage.getId() + 1);
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, sender.getToken())
-              .bodyValue(messageModel)
+              .bodyValue(pvMessageModel)
               .exchange()
               .expectStatus()
               .isBadRequest()
@@ -436,20 +658,20 @@ class ServerControllerTest {
     }
 
     @Test
-    void editMessage_messageDoesntYourMessage() {
-        Message message = messages.get(2);
-        MessageModel messageModel = MessageModel.builder()
-                                                .id(message.getId())
+    void editPvMessage_messageIsNotYourMessage() {
+        PvMessage pvMessage = pvMessages.get(2);
+        PvMessageModel pvMessageModel = PvMessageModel.builder()
+                                                .id(pvMessage.getId())
                                                 .text("edited text!")
-                                                .sender(message.getSender())
-                                                .chatId(message.getChatId())
+                                                .sender(pvMessage.getSender())
+                                                .pvId(pvMessage.getPvId())
                                                 .build();
-        User user = userRepository.findById(messages.get(1).getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+        User user = userRepository.findById(pvMessages.get(1).getSender()).get();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
-              .bodyValue(messageModel)
+              .bodyValue(pvMessageModel)
               .exchange()
               .expectStatus()
               .isBadRequest()
@@ -458,46 +680,132 @@ class ServerControllerTest {
     }
 
     @Test
-    void editMessage_ok() {
-        Message message = messages.get(2);
-        MessageModel messageModel = MessageModel.builder()
-                                                .id(message.getId())
+    void editPvMessage_ok() {
+        PvMessage pvMessage = pvMessages.get(2);
+        PvMessageModel pvMessageModel = PvMessageModel.builder()
+                                                .id(pvMessage.getId())
                                                 .text("edited text!")
-                                                .sender(message.getSender())
-                                                .chatId(message.getChatId())
+                                                .sender(pvMessage.getSender())
+                                                .pvId(pvMessage.getPvId())
                                                 .build();
-        User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+        User sender = userRepository.findById(pvMessage.getSender()).get();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.put()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, sender.getToken())
-              .bodyValue(messageModel)
+              .bodyValue(pvMessageModel)
               .exchange()
               .expectStatus()
               .isOk();
-        assertEquals(messageModel.getText(), messageRepository.findById(message.getId()).get().getText());
+        assertEquals(pvMessageModel.getText(), pvMessageRepository.findById(pvMessage.getId()).get().getText());
     }
 
     @Test
-    void testGetMessage_invalidToken() {
-        Message message = messages.get(2);
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+    void editGroupMessage_invalidToken() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessage.getId())
+                .text("edited text!")
+                .sender(groupMessage.getSender())
+                .groupId(groupMessage.getGroupId())
+                .build();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.put()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, ServerController.generateToken())
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.INVALID_TOKEN);
+    }
+
+    @Test
+    void editGroupMessage_messageDoesntExists() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User sender = userRepository.findById(groupMessage.getSender()).get();
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessage.getId())
+                .text("edited text!")
+                .sender(groupMessage.getSender())
+                .groupId(groupMessage.getGroupId())
+                .build();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + (groupMessage.getId() + 1);
+        client.put()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, sender.getToken())
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.MESSAGE_DOESNT_EXIST);
+    }
+
+    @Test
+    void editGroupMessage_messageIsNotYourMessage() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessage.getId())
+                .text("edited text!")
+                .sender(groupMessage.getSender())
+                .groupId(groupMessage.getGroupId())
+                .build();
+        User user = userRepository.findById(groupMessages.get(1).getSender()).get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.put()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, user.getToken())
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE);
+    }
+
+    @Test
+    void editGroupMessage_ok() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .id(groupMessage.getId())
+                .text("edited text!")
+                .sender(groupMessage.getSender())
+                .groupId(groupMessage.getGroupId())
+                .build();
+        User sender = userRepository.findById(groupMessage.getSender()).get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.put()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, sender.getToken())
+                .bodyValue(groupMessageModel)
+                .exchange()
+                .expectStatus()
+                .isOk();
+        assertEquals(groupMessageModel.getText(), groupMessageRepository.findById(groupMessage.getId()).get().getText());
+    }
+
+    @Test
+    void getPvMessage_invalidToken() {
+        PvMessage pvMessage = pvMessages.get(2);
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.get().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest();
     }
 
     @Test
-    void testGetMessage_messageDoesntExists() {
-        Message message = messages.get(2);
-        User sender = userRepository.findById(message.getSender()).get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + (message.getId() + 1);
+    void getPvMessage_messageDoesntExists() {
+        PvMessage pvMessage = pvMessages.get(2);
+        User sender = userRepository.findById(pvMessage.getSender()).get();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + (pvMessage.getId() + 1);
         client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest();
     }
 
     @Test
-    void getMessage_messageIsNotInYourChats() {
-        Message message = messages.get(2);
+    void getPvMessage_messageIsNotInYourChats() {
+        PvMessage pvMessage = pvMessages.get(2);
         User user = userRepository.findById("ali").get();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.get()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
@@ -507,19 +815,62 @@ class ServerControllerTest {
     }
 
     @Test
-    void testGetMessage_ok() {
-        Message message = messages.get(2);
+    void getPvMessage_ok() {
+        PvMessage pvMessage = pvMessages.get(2);
         User user = userRepository.findById("javad").get();
-        MessageModel expected = message.toMessageModel();
-        String url = UrlPaths.MESSAGES_URL_PATH + "/" + message.getId();
+        PvMessageModel expected = pvMessage.toPvMessageModel();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + File.separator + pvMessage.getId();
         client.get()
               .uri(url)
               .header(HttpHeaders.AUTHORIZATION, user.getToken())
               .exchange()
               .expectStatus()
               .isOk()
-              .expectBody(MessageModel.class)
+              .expectBody(PvMessageModel.class)
               .isEqualTo(expected);
+    }
+
+    @Test
+    void getGroupMessage_invalidToken() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, ServerController.generateToken()).exchange().expectStatus().isBadRequest();
+    }
+
+    @Test
+    void getGroupMessage_messageDoesntExists() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User sender = userRepository.findById(groupMessage.getSender()).get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + (groupMessage.getId() + 1);
+        client.get().uri(url).header(HttpHeaders.AUTHORIZATION, sender.getToken()).exchange().expectStatus().isBadRequest();
+    }
+
+    @Test
+    void getGroupMessage_messageIsNotInYourChats() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User user = userRepository.findById("ali").get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, user.getToken())
+                .exchange()
+                .expectStatus()
+                .isBadRequest();
+    }
+
+    @Test
+    void getGroupMessage_ok() {
+        GroupMessage groupMessage = groupMessages.get(2);
+        User user = userRepository.findById("javad").get();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + File.separator + groupMessage.getId();
+        client.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, user.getToken())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(GroupMessageModel.class)
+                .isEqualTo(groupMessage.toGroupMessageModel());
     }
 
     @Test

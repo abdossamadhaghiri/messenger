@@ -3,15 +3,13 @@ package org.example.model;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+@SuperBuilder(toBuilder = true)
 @Getter
-@SuperBuilder
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@EqualsAndHashCode
-public abstract class ChatModel {
+public class GroupMessageModel extends MessageModel {
 
-    private @Setter Long id;
-
+    private Long groupId;
 }

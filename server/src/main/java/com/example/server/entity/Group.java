@@ -1,14 +1,19 @@
 package com.example.server.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.example.model.ChatModel;
+import org.example.model.GroupMessageModel;
 import org.example.model.GroupModel;
-import org.example.model.MessageModel;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,32 +27,36 @@ import java.util.List;
 public class Group extends Chat {
 
     private String owner;
-
     private List<String> members;
-
     private String name;
 
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn
+    @OneToMany(cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<GroupMessage> groupMessages = new ArrayList<>();
+
     public GroupModel toGroupModel() {
-        List<MessageModel> messageModels = new ArrayList<>();
-        this.getMessages().forEach(message -> messageModels.add(message.toMessageModel()));
+        List<GroupMessageModel> groupMessageModels = new ArrayList<>();
+        this.groupMessages.forEach(groupMessage -> groupMessageModels.add(groupMessage.toGroupMessageModel()));
         return GroupModel.builder()
                 .id(this.getId())
                 .owner(this.owner)
                 .members(this.members)
                 .name(this.name)
-                .messages(messageModels)
+                .groupMessages(groupMessageModels)
                 .build();
     }
 
     public static Group fromGroupModel(GroupModel groupModel) {
-        List<Message> messages = new ArrayList<>();
-        groupModel.getMessages().forEach(messageModel -> messages.add(Message.fromMessageModel(messageModel)));
+        List<GroupMessage> groupMessages = new ArrayList<>();
+        groupModel.getGroupMessages().forEach(groupMessageModel -> groupMessages.add(GroupMessage.fromGroupMessageModel(groupMessageModel)));
         return Group.builder()
                 .id(groupModel.getId())
                 .owner(groupModel.getOwner())
                 .members(groupModel.getMembers())
                 .name(groupModel.getName())
-                .messages(messages)
+                .groupMessages(groupMessages)
                 .build();
     }
 
