@@ -13,6 +13,7 @@ public class UserModel {
 
     private String username;
     private String token;
-    private List<ChatModel> chats;
+    private List<PvModel> pvs;
+    private List<GroupModel> groups;
 
 }

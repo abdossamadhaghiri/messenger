@@ -1,12 +1,10 @@
 package com.example.server.entity;
 
 import jakarta.persistence.Entity;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.example.model.ChatModel;
 import org.example.model.MessageModel;
 import org.example.model.PvModel;
 
@@ -24,8 +22,8 @@ public class Pv extends Chat {
 
     private String second;
 
-    @Override
-    public ChatModel toChatModel() {
+
+    public PvModel toPvModel() {
         List<MessageModel> messageModels = new ArrayList<>();
         this.getMessages().forEach(message -> messageModels.add(message.toMessageModel()));
         return PvModel.builder()
