@@ -5,12 +5,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+@SuperBuilder(toBuilder = true)
 @Getter
-@EqualsAndHashCode
-@SuperBuilder
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public abstract class ChatModel {
+public class PvMessageModel extends MessageModel {
 
-    private Long id;
+    private Long pvId;
 
 }

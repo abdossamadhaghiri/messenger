@@ -2,27 +2,28 @@ package org.example.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Value;
+import lombok.experimental.SuperBuilder;
 
 @AllArgsConstructor
-@NoArgsConstructor(force = true)
-@Value
-@Builder(toBuilder = true)
-public class MessageModel {
+@NoArgsConstructor
+@SuperBuilder(toBuilder = true)
+@Getter
+@EqualsAndHashCode
+public abstract class MessageModel {
 
-    Long id;
+    private Long id;
 
-    String text;
+    private String text;
 
-    String sender;
-
-    Long chatId;
+    private String sender;
 
     @Builder.Default
-    Long repliedMessageId = 0L;
+    private Long repliedMessageId = 0L;
 
-    String forwardedFrom;
+    private String forwardedFrom;
 
 
 }
