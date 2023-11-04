@@ -13,4 +13,8 @@ public class Logger {
         System.out.println(ANSI_GREEN + text + ANSI_RESET);
     }
 
+    public static void print(String text) {
+        System.out.println(text);
+    }
+
 }

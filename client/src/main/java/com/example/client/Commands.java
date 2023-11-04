@@ -8,4 +8,6 @@ public class Commands {
     public static final String INVALID_CHAT_ID = "invalid chat id!";
     public static final String USERNAME_DOESNT_EXIST = "the username doesnt exist";
 
+    public static final String ENTER_YOUR_MESSAGE_ID = "enter your message id:";
+
 }
