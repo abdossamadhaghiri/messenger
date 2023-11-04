@@ -1,18 +1,22 @@
 package com.example.server;
 
+import com.example.server.entity.GroupMessage;
 import com.example.server.entity.Pv;
+import com.example.server.entity.PvMessage;
 import com.example.server.entity.User;
 import com.example.server.entity.Group;
 import com.example.server.entity.Message;
-import com.example.server.entity.Chat;
-import com.example.server.repository.ChatRepository;
-import com.example.server.repository.MessageRepository;
+import com.example.server.repository.GroupMessageRepository;
+import com.example.server.repository.GroupRepository;
+import com.example.server.repository.PvMessageRepository;
+import com.example.server.repository.PvRepository;
 import lombok.AllArgsConstructor;
 import com.example.server.repository.UserRepository;
 import org.apache.commons.lang.RandomStringUtils;
 import org.example.model.ChatModel;
+import org.example.model.GroupMessageModel;
 import org.example.model.GroupModel;
-import org.example.model.MessageModel;
+import org.example.model.PvMessageModel;
 import org.example.model.PvModel;
 import org.example.model.UserModel;
 import org.springframework.http.HttpHeaders;
@@ -34,8 +38,10 @@ import java.util.Optional;
 @RestController
 public class ServerController {
     private final UserRepository userRepository;
-    private final MessageRepository messageRepository;
-    private final ChatRepository chatRepository;
+    private final PvMessageRepository pvMessageRepository;
+    private final GroupMessageRepository groupMessageRepository;
+    private final PvRepository pvRepository;
+    private final GroupRepository groupRepository;
     private static final int TOKEN_SIZE = 16;
 
     @PostMapping("/signUp")
@@ -43,7 +49,7 @@ public class ServerController {
         if (userRepository.existsById(username)) {
             return new ResponseEntity<>(Commands.USERNAME_ALREADY_EXISTS, HttpStatus.CONFLICT);
         }
-        userRepository.save(new User(username, generateToken(), new ArrayList<>()));
+        userRepository.save(new User(username, generateToken(), new ArrayList<>(), new ArrayList<>()));
         return new ResponseEntity<>(Commands.SUCCESSFULLY_SIGNED_UP, HttpStatus.OK);
     }
 
@@ -63,15 +69,8 @@ public class ServerController {
                 .orElseGet(() -> new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
     }
 
-    @PostMapping("/chats")
-    public ResponseEntity<ChatModel> newChat(@RequestBody ChatModel chatModel) {
-        if (chatModel instanceof PvModel pvModel) {
-            return newPv(pvModel);
-        }
-        return newGroup(((GroupModel) chatModel));
-    }
-
-    private ResponseEntity<ChatModel> newPv(PvModel pvModel) {
+    @PostMapping("/pvs")
+    public ResponseEntity<PvModel> newPv(@RequestBody PvModel pvModel) {
         Optional<User> firstUser = userRepository.findById(pvModel.getFirst());
         Optional<User> secondUser = userRepository.findById(pvModel.getSecond());
         if (firstUser.isEmpty() || secondUser.isEmpty()) {
@@ -81,15 +80,16 @@ public class ServerController {
             return new ResponseEntity<>(null, HttpStatus.CONFLICT);
         }
         Pv pv = Pv.builder().first(pvModel.getFirst()).second(pvModel.getSecond()).build();
-        chatRepository.save(pv);
-        firstUser.get().getChats().add(pv);
-        secondUser.get().getChats().add(pv);
+        pvRepository.save(pv);
+        firstUser.get().getPvs().add(pv);
+        secondUser.get().getPvs().add(pv);
         userRepository.save(firstUser.get());
         userRepository.save(secondUser.get());
-        return new ResponseEntity<>(pv.toChatModel(), HttpStatus.CREATED);
+        return new ResponseEntity<>(pv.toPvModel(), HttpStatus.CREATED);
     }
 
-    private ResponseEntity<ChatModel> newGroup(GroupModel groupModel) {
+    @PostMapping("/groups")
+    public ResponseEntity<ChatModel> newGroup(@RequestBody GroupModel groupModel) {
         if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
@@ -98,128 +98,219 @@ public class ServerController {
                 .members(groupModel.getMembers())
                 .name(groupModel.getName())
                 .build();
-        chatRepository.save(group);
+        groupRepository.save(group);
         for (String member : group.getMembers()) {
             User user = userRepository.findById(member).get();
-            user.getChats().add(group);
+            user.getGroups().add(group);
             userRepository.save(user);
         }
-        return new ResponseEntity<>(group.toChatModel(), HttpStatus.CREATED);
+        return new ResponseEntity<>(group.toGroupModel(), HttpStatus.CREATED);
     }
 
-    @GetMapping("/chats/{chatId}")
-    public ResponseEntity<ChatModel> getChat(@PathVariable Long chatId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+    @GetMapping("/pvs/{pvId}")
+    public ResponseEntity<PvModel> getPv(@PathVariable Long pvId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
-        Optional<Chat> chat = chatRepository.findById(chatId);
-        if (user.isEmpty()) {
-            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        Optional<Pv> pv = pvRepository.findById(pvId);
+        if (user.isEmpty() || pv.isEmpty() || !user.get().getPvs().contains(pv.get())) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-        if (chat.isEmpty()) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(pv.get().toPvModel(), HttpStatus.OK);
+    }
+
+    @GetMapping("/groups/{groupId}")
+    public ResponseEntity<GroupModel> getGroup(@PathVariable Long groupId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        Optional<Group> group = groupRepository.findById(groupId);
+        if (user.isEmpty() || group.isEmpty() || !user.get().getGroups().contains(group.get())) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-        if (!user.get().getChats().contains(chat.get())) {
-            return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
-        }
-        return new ResponseEntity<>(chat.get().toChatModel(), HttpStatus.OK);
+        return new ResponseEntity<>(group.get().toGroupModel(), HttpStatus.OK);
     }
 
     private Pv getPvByUsernames(String firstUsername, String secondUsername) {
-        for (Chat chat : chatRepository.findAll()) {
-            if (chat instanceof Pv pv &&
-                    ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
-                    (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername)))) {
+        for (Pv pv : pvRepository.findAll()) {
+            if ((pv.getFirst().equals(firstUsername) && pv.getSecond().equals(secondUsername)) ||
+                    (pv.getFirst().equals(secondUsername) && pv.getSecond().equals(firstUsername))) {
                 return pv;
             }
         }
         return null;
     }
 
-    @PostMapping("/messages")
-    public ResponseEntity<String> newMessage(@RequestBody MessageModel messageModel) {
-        Optional<User> sender = userRepository.findById(messageModel.getSender());
+    @PostMapping("/pvMessages")
+    public ResponseEntity<String> newPvMessage(@RequestBody PvMessageModel pvMessageModel) {
+        Optional<User> sender = userRepository.findById(pvMessageModel.getSender());
         if (sender.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
-        Optional<Chat> chat = chatRepository.findById(messageModel.getChatId());
-        if (chat.isEmpty()) {
+        Optional<Pv> pv = pvRepository.findById(pvMessageModel.getPvId());
+        if (pv.isEmpty()) {
             return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
-        if (!sender.get().getChats().contains(chat.get())) {
+        if (!sender.get().getPvs().contains(pv.get())) {
             return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.FORBIDDEN);
         }
-        Optional<Message> repliedMessage = messageRepository.findById(messageModel.getRepliedMessageId());
-        if (!messageModel.getRepliedMessageId().equals(0L) && repliedMessage.isEmpty()) {
+        Optional<PvMessage> repliedMessage = pvMessageRepository.findById(pvMessageModel.getRepliedMessageId());
+        if (!pvMessageModel.getRepliedMessageId().equals(0L) && repliedMessage.isEmpty()) {
             return new ResponseEntity<>(Commands.REPLIED_MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
-        if (repliedMessage.isPresent() && !messageModel.getChatId().equals(repliedMessage.get().getChatId())) {
+        if (repliedMessage.isPresent() && !pvMessageModel.getPvId().equals(repliedMessage.get().getPvId())) {
             return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.FORBIDDEN);
         }
-        if (messageModel.getForwardedFrom() != null && !userRepository.existsById(messageModel.getForwardedFrom())) {
+        if (pvMessageModel.getForwardedFrom() != null && !userRepository.existsById(pvMessageModel.getForwardedFrom())) {
             return new ResponseEntity<>(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
-        Message message = Message.builder()
-                .text(messageModel.getText())
-                .sender(messageModel.getSender())
-                .chatId(messageModel.getChatId())
-                .repliedMessageId(messageModel.getRepliedMessageId())
-                .forwardedFrom(messageModel.getForwardedFrom())
+        PvMessage pvMessage = PvMessage.builder()
+                .text(pvMessageModel.getText())
+                .sender(pvMessageModel.getSender())
+                .pvId(pvMessageModel.getPvId())
+                .repliedMessageId(pvMessageModel.getRepliedMessageId())
+                .forwardedFrom(pvMessageModel.getForwardedFrom())
                 .build();
-        messageRepository.save(message);
-        chat.get().getMessages().add(message);
-        chatRepository.save(chat.get());
+        pvMessageRepository.save(pvMessage);
+        pv.get().getPvMessages().add(pvMessage);
+        pvRepository.save(pv.get());
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }
 
-    @DeleteMapping("/messages/{messageId}")
-    public ResponseEntity<String> deleteMessage(@PathVariable Long messageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
-        Optional<Message> message = messageRepository.findById(messageId);
+    @PostMapping("/groupMessages")
+    public ResponseEntity<String> newGroupMessage(@RequestBody GroupMessageModel groupMessageModel) {
+        Optional<User> sender = userRepository.findById(groupMessageModel.getSender());
+        if (sender.isEmpty()) {
+            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        Optional<Group> group = groupRepository.findById(groupMessageModel.getGroupId());
+        if (group.isEmpty()) {
+            return new ResponseEntity<>(Commands.CHAT_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        if (!sender.get().getGroups().contains(group.get())) {
+            return new ResponseEntity<>(Commands.CHAT_IS_NOT_YOUR_CHAT, HttpStatus.FORBIDDEN);
+        }
+        Optional<GroupMessage> repliedMessage = groupMessageRepository.findById(groupMessageModel.getRepliedMessageId());
+        if (!groupMessageModel.getRepliedMessageId().equals(0L) && repliedMessage.isEmpty()) {
+            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        if (repliedMessage.isPresent() && !groupMessageModel.getGroupId().equals(repliedMessage.get().getGroupId())) {
+            return new ResponseEntity<>(Commands.REPLIED_MESSAGE_IS_NOT_IN_THIS_CHAT, HttpStatus.FORBIDDEN);
+        }
+        if (groupMessageModel.getForwardedFrom() != null && !userRepository.existsById(groupMessageModel.getForwardedFrom())) {
+            return new ResponseEntity<>(Commands.FORWARDED_FROM_USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        GroupMessage groupMessage = GroupMessage.builder()
+                .text(groupMessageModel.getText())
+                .sender(groupMessageModel.getSender())
+                .groupId(groupMessageModel.getGroupId())
+                .repliedMessageId(groupMessageModel.getRepliedMessageId())
+                .forwardedFrom(groupMessageModel.getForwardedFrom())
+                .build();
+        groupMessageRepository.save(groupMessage);
+        group.get().getGroupMessages().add(groupMessage);
+        groupRepository.save(group.get());
+        return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/pvMessages/{pvMessageId}")
+    public ResponseEntity<String> deletePvMessage(@PathVariable Long pvMessageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<PvMessage> pvMessage = pvMessageRepository.findById(pvMessageId);
         Optional<User> user = userRepository.findByToken(token);
         if (user.isEmpty()) {
             return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
         }
-        if (message.isEmpty()) {
+        if (pvMessage.isEmpty()) {
             return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
-        if (!message.get().getSender().equals(user.get().getUsername())) {
+        if (!pvMessage.get().getSender().equals(user.get().getUsername())) {
             return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.FORBIDDEN);
         }
-        messageRepository.deleteById(messageId);
+        pvMessageRepository.deleteById(pvMessageId);
         return new ResponseEntity<>(Commands.MESSAGE_DELETED, HttpStatus.OK);
     }
 
-    @PutMapping("/messages/{messageId}")
-    public ResponseEntity<String> editMessage(@PathVariable Long messageId, @RequestBody MessageModel messageModel,
+    @DeleteMapping("/groupMessages/{groupMessageId}")
+    public ResponseEntity<String> deleteGroupMessage(@PathVariable Long groupMessageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<GroupMessage> groupMessage = groupMessageRepository.findById(groupMessageId);
+        Optional<User> user = userRepository.findByToken(token);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
+        }
+        if (groupMessage.isEmpty()) {
+            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        if (!groupMessage.get().getSender().equals(user.get().getUsername())) {
+            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.FORBIDDEN);
+        }
+        groupMessageRepository.deleteById(groupMessageId);
+        return new ResponseEntity<>(Commands.MESSAGE_DELETED, HttpStatus.OK);
+    }
+
+    @PutMapping("/pvMessages/{pvMessageId}")
+    public ResponseEntity<String> editPvMessage(@PathVariable Long pvMessageId, @RequestBody PvMessageModel pvMessageModel,
                                               @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
         if (user.isEmpty()) {
             return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
         }
-        Optional<Message> message = messageRepository.findById(messageId);
-        if (message.isEmpty()) {
+        Optional<PvMessage> pvMessage = pvMessageRepository.findById(pvMessageId);
+        if (pvMessage.isEmpty()) {
             return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
-        if (!message.get().getSender().equals(user.get().getUsername())) {
+        if (!pvMessage.get().getSender().equals(user.get().getUsername())) {
             return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.FORBIDDEN);
         }
-        message.get().setText(messageModel.getText());
-        messageRepository.save(message.get());
+        pvMessage.get().setText(pvMessageModel.getText());
+        pvMessageRepository.save(pvMessage.get());
         return new ResponseEntity<>(Commands.MESSAGE_EDITED, HttpStatus.OK);
     }
 
-    @GetMapping("/messages/{messageId}")
-    public ResponseEntity<Message> getMessage(@PathVariable Long messageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+    @PutMapping("/groupMessages/{groupMessageId}")
+    public ResponseEntity<String> editGroupMessage(@PathVariable Long groupMessageId, @RequestBody GroupMessageModel groupMessageModel,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
         Optional<User> user = userRepository.findByToken(token);
-        Optional<Message> message = messageRepository.findById(messageId);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
+        }
+        Optional<GroupMessage> groupMessage = groupMessageRepository.findById(groupMessageId);
+        if (groupMessage.isEmpty()) {
+            return new ResponseEntity<>(Commands.MESSAGE_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        if (!groupMessage.get().getSender().equals(user.get().getUsername())) {
+            return new ResponseEntity<>(Commands.MESSAGE_IS_NOT_YOUR_MESSAGE, HttpStatus.FORBIDDEN);
+        }
+        groupMessage.get().setText(groupMessageModel.getText());
+        groupMessageRepository.save(groupMessage.get());
+        return new ResponseEntity<>(Commands.MESSAGE_EDITED, HttpStatus.OK);
+    }
+
+    @GetMapping("/pvMessages/{pvMessageId}")
+    public ResponseEntity<Message> getPvMessage(@PathVariable Long pvMessageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        Optional<PvMessage> pvMessage = pvMessageRepository.findById(pvMessageId);
         if (user.isEmpty()) {
             return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
         }
-        if (message.isEmpty()) {
+        if (pvMessage.isEmpty()) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-        if (!user.get().getChats().contains(chatRepository.findById(message.get().getChatId()).get())) {
+        if (!user.get().getPvs().contains(pvRepository.findById(pvMessage.get().getPvId()).get())) {
             return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
         }
-        return new ResponseEntity<>(message.get(), HttpStatus.OK);
+        return new ResponseEntity<>(pvMessage.get(), HttpStatus.OK);
+    }
+
+    @GetMapping("/groupMessages/{groupMessageId}")
+    public ResponseEntity<Message> getGroupMessage(@PathVariable Long groupMessageId, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        Optional<GroupMessage> groupMessage = groupMessageRepository.findById(groupMessageId);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+        if (groupMessage.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+        if (!user.get().getPvs().contains(pvRepository.findById(groupMessage.get().getGroupId()).get())) {
+            return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
+        }
+        return new ResponseEntity<>(groupMessage.get(), HttpStatus.OK);
     }
 
 }

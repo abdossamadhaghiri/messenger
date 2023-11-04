@@ -1,9 +1,10 @@
 package com.example.client;
 
 import org.example.UrlPaths;
-import org.example.model.ChatModel;
+import org.example.model.GroupMessageModel;
 import org.example.model.GroupModel;
 import org.example.model.MessageModel;
+import org.example.model.PvMessageModel;
 import org.example.model.PvModel;
 import org.example.model.UserModel;
 import org.springframework.context.annotation.Configuration;
@@ -68,38 +69,59 @@ public class CommandProcessor {
                 break;
             }
             onlineUser = userModel;
-            showChatList(onlineUser.getChats());
-            System.out.println("1. select chat\n2. enter a username\n3. create a group\n4. logout");
+            showPvs(onlineUser.getPvs());
+            showGroups(onlineUser.getGroups());
+            System.out.println("1. select chat by id\n2. enter pv by username\n3. create a group\n4. logout");
             String option = scanner.nextLine();
             switch (option) {
-                case "1" -> {
-                    System.out.println("enter your chat id:");
-                    String input = scanner.nextLine();
-                    if (isNumeric(input) && isOldChat(Long.valueOf(input))) {
-                        chat(Long.valueOf(input));
-                    } else {
-                        System.out.println(Commands.INVALID_CHAT_ID);
-                    }
-                }
-                case "2" -> {
-                    System.out.println("enter your username:");
-                    String username = scanner.nextLine();
-                    UserModel peer = getUser(username);
-                    if (peer != null) {
-                        Long chatId = getChatId(username);
-                        if (chatId != -1L) {
-                            chat(chatId);
-                        } else {
-                            System.out.println(Commands.PLEASE_TRY_AGAIN);
-                        }
-                    } else {
-                        System.out.println(Commands.USERNAME_DOESNT_EXIST);
-                    }
-                }
+                case "1" -> selectChatById();
+                case "2" -> enterPvByUsername();
                 case "3" -> createGroup();
                 case "4" -> flag = false;
                 default -> System.out.println(Commands.INVALID_COMMAND);
             }
+        }
+    }
+
+    private void selectChatById() {
+        System.out.println("1. Group\n2. Pv");
+        String option = scanner.nextLine();
+        switch (option) {
+            case "1" -> {
+                System.out.println("enter your group id:");
+                String input = scanner.nextLine();
+                if (isNumeric(input) && isOldGroup(Long.valueOf(input))) {
+                    groupChat(Long.valueOf(input));
+                } else {
+                    System.out.println(Commands.INVALID_CHAT_ID);
+                }
+            }
+            case "2" -> {
+                System.out.println("enter your pv id:");
+                String input = scanner.nextLine();
+                if (isNumeric(input) && isOldPv(Long.valueOf(input))) {
+                    pvChat(Long.valueOf(input));
+                } else {
+                    System.out.println(Commands.INVALID_CHAT_ID);
+                }
+            }
+            default -> System.out.println(Commands.INVALID_COMMAND);
+        }
+    }
+
+    private void enterPvByUsername() {
+        System.out.println("enter your username:");
+        String username = scanner.nextLine();
+        UserModel peer = getUser(username);
+        if (peer != null) {
+            Long pvId = getPvId(username);
+            if (pvId != -1L) {
+                pvChat(pvId);
+            } else {
+                System.out.println(Commands.PLEASE_TRY_AGAIN);
+            }
+        } else {
+            System.out.println(Commands.USERNAME_DOESNT_EXIST);
         }
     }
 
@@ -137,14 +159,12 @@ public class CommandProcessor {
         return false;
     }
 
-    private void showChatList(List<ChatModel> chats) {
-        for (ChatModel chat : chats) {
-            if (chat instanceof PvModel pv) {
-                Logger.printYellow("- " + getPeer(pv) + ": " + chat.getId());
-            } else {
-                Logger.printYellow("- " + ((GroupModel) chat).getName() + "(G): " + chat.getId());
-            }
-        }
+    private void showPvs(List<PvModel> pvs) {
+        pvs.forEach(pv -> Logger.printYellow("- " + getPeer(pv) + ": " + pv.getId()));
+    }
+
+    private void showGroups(List<GroupModel> groups) {
+        groups.forEach(group -> Logger.printYellow("- " + group.getName() + "(G): " + group.getId()));
     }
 
     private String getPeer(PvModel pv) {
@@ -154,28 +174,28 @@ public class CommandProcessor {
         return pv.getFirst();
     }
 
-    private void chat(Long chatId) {
+    private void pvChat(Long pvId) {
         boolean flag = true;
         while (flag) {
-            ChatModel chat = getChat(chatId);
-            if (chat == null) {
+            PvModel pv = getPv(pvId);
+            if (pv == null) {
                 System.out.println(Commands.PLEASE_TRY_AGAIN);
                 break;
             }
-            chat.getMessages().forEach(this::printMessageInChat);
+            pv.getPvMessages().forEach(this::printMessageInChat);
             System.out.println("1. send message\n2. delete message\n3. edit message\n4. forward message\n5. back");
             String option = scanner.nextLine();
             switch (option) {
                 case "1" -> {
                     System.out.println("write your message:");
                     String text = scanner.nextLine();
-                    System.out.println(writeMessage(text, chatId));
+                    System.out.println(writeMessageInPv(text, pvId));
                 }
                 case "2" -> {
                     System.out.println("enter your message id:");
-                    String messageId = scanner.nextLine();
-                    if (isNumeric(messageId)) {
-                        System.out.println(deleteMessage(Long.valueOf(messageId), chatId));
+                    String pvMessageId = scanner.nextLine();
+                    if (isNumeric(pvMessageId)) {
+                        System.out.println(deletePvMessage(Long.valueOf(pvMessageId), pvId));
                     } else {
                         System.out.println(Commands.INVALID_MESSAGE_ID);
                     }
@@ -184,16 +204,76 @@ public class CommandProcessor {
                     System.out.println("enter your message id:");
                     String messageId = scanner.nextLine();
                     if (isNumeric(messageId)) {
-                        System.out.println(editMessage(Long.valueOf(messageId), chatId));
+                        System.out.println(editPvMessage(Long.valueOf(messageId), pvId));
                     } else {
                         System.out.println(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "4" -> {
                     System.out.println("enter your message id:");
+                    String sourceMessageId = scanner.nextLine();
+                    if (isNumeric(sourceMessageId)) {
+                        PvMessageModel pvMessage = getPvMessage(Long.valueOf(sourceMessageId));
+                        if (pvMessage != null && pvMessage.getPvId().equals(pvId)) {
+                            forward(pvMessage);
+                        } else {
+                            System.out.println(Commands.INVALID_MESSAGE_ID);
+                        }
+                    } else {
+                        System.out.println(Commands.INVALID_MESSAGE_ID);
+                    }
+                }
+                case "5" -> flag = false;
+                default -> System.out.println(Commands.INVALID_COMMAND);
+            }
+        }
+    }
+
+    private void groupChat(Long groupId) {
+        boolean flag = true;
+        while (flag) {
+            GroupModel group = getGroup(groupId);
+            if (group == null) {
+                System.out.println(Commands.PLEASE_TRY_AGAIN);
+                break;
+            }
+            group.getGroupMessages().forEach(this::printMessageInChat);
+            System.out.println("1. send message\n2. delete message\n3. edit message\n4. forward message\n5. back");
+            String option = scanner.nextLine();
+            switch (option) {
+                case "1" -> {
+                    System.out.println("write your message:");
+                    String text = scanner.nextLine();
+                    System.out.println(writeMessageInGroup(text, groupId));
+                }
+                case "2" -> {
+                    System.out.println("enter your message id:");
+                    String pvMessageId = scanner.nextLine();
+                    if (isNumeric(pvMessageId)) {
+                        System.out.println(deleteGroupMessage(Long.valueOf(pvMessageId), groupId));
+                    } else {
+                        System.out.println(Commands.INVALID_MESSAGE_ID);
+                    }
+                }
+                case "3" -> {
+                    System.out.println("enter your message id:");
                     String messageId = scanner.nextLine();
                     if (isNumeric(messageId)) {
-                        forward(Long.valueOf(messageId), chatId);
+                        System.out.println(editGroupMessage(Long.valueOf(messageId), groupId));
+                    } else {
+                        System.out.println(Commands.INVALID_MESSAGE_ID);
+                    }
+                }
+                case "4" -> {
+                    System.out.println("enter your message id:");
+                    String sourceMessageId = scanner.nextLine();
+                    if (isNumeric(sourceMessageId)) {
+                        GroupMessageModel groupMessage = getGroupMessage(Long.valueOf(sourceMessageId));
+                        if (groupMessage != null && groupMessage.getGroupId().equals(groupId)) {
+                            forward(groupMessage);
+                        } else {
+                            System.out.println(Commands.INVALID_MESSAGE_ID);
+                        }
                     } else {
                         System.out.println(Commands.INVALID_MESSAGE_ID);
                     }
@@ -218,24 +298,29 @@ public class CommandProcessor {
         return Pattern.matches("\\d+", input);
     }
 
-    private boolean isOldChat(Long chatId) {
-        return onlineUser.getChats().stream().anyMatch(chat -> chat.getId().equals(chatId));
+    private boolean isOldPv(Long pvId) {
+        return onlineUser.getPvs().stream().anyMatch(pv -> pv.getId().equals(pvId));
     }
 
-    private Long getChatId(String username) {
-        for (ChatModel chat : onlineUser.getChats()) {
-            if (chat instanceof PvModel pv && getPeer(pv).equals(username)) {
+    private boolean isOldGroup(Long groupId) {
+        return onlineUser.getGroups().stream().anyMatch(group -> group.getId().equals(groupId));
+    }
+
+    private Long getPvId(String username) {
+        for (PvModel pv : onlineUser.getPvs()) {
+            if (getPeer(pv).equals(username)) {
                 return pv.getId();
             }
         }
         PvModel newPv = createNewPv(username);
+        onlineUser = getUser(onlineUser.getUsername());
         return newPv != null ? newPv.getId() : -1L;
     }
 
     private PvModel createNewPv(String peerUsername) {
         PvModel pvModel = PvModel.builder().first(onlineUser.getUsername()).second(peerUsername).build();
         ResponseEntity<PvModel> response = client.post()
-                .uri(UrlPaths.CHATS_URL_PATH)
+                .uri(UrlPaths.PVS_URL_PATH)
                 .bodyValue(pvModel)
                 .retrieve()
                 .toEntity(PvModel.class)
@@ -250,13 +335,13 @@ public class CommandProcessor {
         return sender;
     }
 
-    private String writeMessage(String text, Long chatId) {
+    private String writeMessageInPv(String text, Long pvId) {
         System.out.println("1. send\n2. reply");
         String option = scanner.nextLine();
         long repliedMessageId = 0;
         switch (option) {
             case "1" -> {
-                return sendMessage(text, chatId, repliedMessageId, null);
+                return sendPvMessage(text, pvId, repliedMessageId, null);
             }
             case "2" -> {
                 System.out.println("enter your message id:");
@@ -265,7 +350,7 @@ public class CommandProcessor {
                     return Commands.INVALID_MESSAGE_ID;
                 }
                 repliedMessageId = Long.parseLong(input);
-                return sendMessage(text, chatId, repliedMessageId, null);
+                return sendPvMessage(text, pvId, repliedMessageId, null);
             }
             default -> {
                 return Commands.INVALID_COMMAND;
@@ -273,18 +358,60 @@ public class CommandProcessor {
         }
     }
 
-    private String sendMessage(String text, Long chatId, Long repliedMessageId, String forwardedFrom) {
-        MessageModel messageModel = MessageModel.builder()
+    private String writeMessageInGroup(String text, Long groupId) {
+        System.out.println("1. send\n2. reply");
+        String option = scanner.nextLine();
+        long repliedMessageId = 0;
+        switch (option) {
+            case "1" -> {
+                return sendGroupMessage(text, groupId, repliedMessageId, null);
+            }
+            case "2" -> {
+                System.out.println("enter your message id:");
+                String input = scanner.nextLine();
+                if (!isNumeric(input)) {
+                    return Commands.INVALID_MESSAGE_ID;
+                }
+                repliedMessageId = Long.parseLong(input);
+                return sendGroupMessage(text, groupId, repliedMessageId, null);
+            }
+            default -> {
+                return Commands.INVALID_COMMAND;
+            }
+        }
+    }
+
+    private String sendPvMessage(String text, Long pvId, Long repliedMessageId, String forwardedFrom) {
+        PvMessageModel pvMessageModel = PvMessageModel.builder()
                 .text(text)
                 .sender(onlineUser.getUsername())
-                .chatId(chatId)
+                .pvId(pvId)
                 .repliedMessageId(repliedMessageId)
                 .forwardedFrom(forwardedFrom)
                 .build();
-        String url = UrlPaths.MESSAGES_URL_PATH;
+        String url = UrlPaths.PV_MESSAGES_URL_PATH;
         ResponseEntity<String> response = client.post()
                 .uri(url)
-                .bodyValue(messageModel)
+                .bodyValue(pvMessageModel)
+                .retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
+                .toEntity(String.class)
+                .block();
+        return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
+    }
+
+    private String sendGroupMessage(String text, Long groupId, Long repliedMessageId, String forwardedFrom) {
+        GroupMessageModel groupMessageModel = GroupMessageModel.builder()
+                .text(text)
+                .sender(onlineUser.getUsername())
+                .groupId(groupId)
+                .repliedMessageId(repliedMessageId)
+                .forwardedFrom(forwardedFrom)
+                .build();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH;
+        ResponseEntity<String> response = client.post()
+                .uri(url)
+                .bodyValue(groupMessageModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -319,7 +446,7 @@ public class CommandProcessor {
                 default -> System.out.println(Commands.INVALID_COMMAND);
             }
         }
-        String url = UrlPaths.CHATS_URL_PATH;
+        String url = UrlPaths.GROUPS_URL_PATH;
         GroupModel groupModel = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
         ResponseEntity<GroupModel> response = client.post()
                 .uri(url)
@@ -338,12 +465,31 @@ public class CommandProcessor {
         }
     }
 
-    private String deleteMessage(Long messageId, Long chatId) {
-        MessageModel messageModel = getMessage(messageId);
-        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUser.getUsername())) {
+    private String deletePvMessage(Long pvMessageId, Long pvId) {
+        PvMessageModel pvMessageModel = getPvMessage(pvMessageId);
+        if (pvMessageModel == null || !pvMessageModel.getPvId().equals(pvId) || !pvMessageModel.getSender().equals(onlineUser.getUsername())) {
             return Commands.INVALID_MESSAGE_ID;
         }
-        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + SLASH + pvMessageId;
+        ResponseEntity<String> response = client.delete()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
+                .retrieve()
+                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
+                .toEntity(String.class)
+                .block();
+        if (response == null) {
+            return Commands.PLEASE_TRY_AGAIN;
+        }
+        return response.getBody();
+    }
+
+    private String deleteGroupMessage(Long groupMessageId, Long groupId) {
+        GroupMessageModel groupMessageModel = getGroupMessage(groupMessageId);
+        if (groupMessageModel == null || !groupMessageModel.getGroupId().equals(groupId) || !groupMessageModel.getSender().equals(onlineUser.getUsername())) {
+            return Commands.INVALID_MESSAGE_ID;
+        }
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + SLASH + groupMessageId;
         ResponseEntity<String> response = client.delete()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
@@ -357,18 +503,18 @@ public class CommandProcessor {
         return response.getBody();
     }
 
-    private String editMessage(Long messageId, Long chatId) {
-        MessageModel messageModel = getMessage(messageId);
-        if (messageModel == null || !messageModel.getChatId().equals(chatId) || !messageModel.getSender().equals(onlineUser.getUsername())) {
+    private String editPvMessage(Long pvMessageId, Long pvId) {
+        PvMessageModel pvMessageModel = getPvMessage(pvMessageId);
+        if (pvMessageModel == null || !pvMessageModel.getPvId().equals(pvId) || !pvMessageModel.getSender().equals(onlineUser.getUsername())) {
             return Commands.INVALID_MESSAGE_ID;
         }
         System.out.println("write your new message:");
         String newText = scanner.nextLine();
-        MessageModel newMessageModel = messageModel.toBuilder().text(newText).build();
-        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
+        PvMessageModel newPvMessageModel = pvMessageModel.toBuilder().text(newText).build();
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + SLASH + pvMessageId;
         ResponseEntity<String> response = client.put()
                 .uri(url)
-                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken()).bodyValue(newMessageModel)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken()).bodyValue(newPvMessageModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -379,23 +525,59 @@ public class CommandProcessor {
         return response.getBody();
     }
 
-    private void forward(Long messageId, Long chatId) {
-        MessageModel messageModel = getMessage(messageId);
-        if (messageModel == null || !messageModel.getChatId().equals(chatId)) {
-            System.out.println(Commands.INVALID_MESSAGE_ID);
-            return;
+    private String editGroupMessage(Long groupMessageId, Long groupId) {
+        GroupMessageModel groupMessageModel = getGroupMessage(groupMessageId);
+        if (groupMessageModel == null || !groupMessageModel.getGroupId().equals(groupId) || !groupMessageModel.getSender().equals(onlineUser.getUsername())) {
+            return Commands.INVALID_MESSAGE_ID;
         }
-        System.out.println("1. select chat\n2. enter a new username");
+        System.out.println("write your new message:");
+        String newText = scanner.nextLine();
+        GroupMessageModel newGroupMessageModel = groupMessageModel.toBuilder().text(newText).build();
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + SLASH + groupMessageId;
+        ResponseEntity<String> response = client.put()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken()).bodyValue(newGroupMessageModel)
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(String.class)
+                .block();
+        if (response == null) {
+            return Commands.PLEASE_TRY_AGAIN;
+        }
+        return response.getBody();
+    }
+
+    private void forward(MessageModel sourceMessage) {
+        System.out.println("1. select chat by id\n2. select pv by username");
         String option = scanner.nextLine();
         switch (option) {
             case "1" -> {
-                System.out.println("enter your chat id:");
-                String input = scanner.nextLine();
-                if (isNumeric(input) && isOldChat(Long.valueOf(input))) {
-                    Long destinationChatId = Long.valueOf(input);
-                    System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
-                } else {
-                    System.out.println(Commands.INVALID_CHAT_ID);
+                System.out.println("1. Group\n2. Pv");
+                String option2 = scanner.nextLine();
+                switch (option2) {
+                    case "1" -> {
+                        System.out.println("enter your group id:");
+                        String input = scanner.nextLine();
+                        if (isNumeric(input) && isOldGroup(Long.valueOf(input))) {
+                            Long destinationGroupId = Long.valueOf(input);
+                            System.out.println(sendGroupMessage(sourceMessage.getText(), destinationGroupId,
+                                    0L, sourceMessage.getSender()));
+                        } else {
+                            System.out.println(Commands.INVALID_CHAT_ID);
+                        }
+                    }
+                    case "2" -> {
+                        System.out.println("enter your pv id:");
+                        String input = scanner.nextLine();
+                        if (isNumeric(input) && isOldPv(Long.valueOf(input))) {
+                            Long destinationPvId = Long.valueOf(input);
+                            System.out.println(sendPvMessage(sourceMessage.getText(), destinationPvId,
+                                    0L, sourceMessage.getSender()));
+                        } else {
+                            System.out.println(Commands.INVALID_CHAT_ID);
+                        }
+                    }
+                    default -> System.out.println(Commands.INVALID_COMMAND);
                 }
             }
             case "2" -> {
@@ -403,9 +585,10 @@ public class CommandProcessor {
                 String username = scanner.nextLine();
                 UserModel peer = getUser(username);
                 if (peer != null) {
-                    Long destinationChatId = getChatId(username);
-                    if (destinationChatId != -1L) {
-                        System.out.println(sendMessage(messageModel.getText(), destinationChatId, 0L, messageModel.getSender()));
+                    Long destinationPvId = getPvId(username);
+                    if (destinationPvId != -1L) {
+                        System.out.println(sendPvMessage(sourceMessage.getText(), destinationPvId,
+                                0L, sourceMessage.getSender()));
                     } else {
                         System.out.println(Commands.PLEASE_TRY_AGAIN);
                     }
@@ -417,14 +600,30 @@ public class CommandProcessor {
         }
     }
 
-    private MessageModel getMessage(Long messageId) {
-        String url = UrlPaths.MESSAGES_URL_PATH + SLASH + messageId;
-        ResponseEntity<MessageModel> response = client.get()
+    private PvMessageModel getPvMessage(Long pvMessageId) {
+        String url = UrlPaths.PV_MESSAGES_URL_PATH + SLASH + pvMessageId;
+        ResponseEntity<PvMessageModel> response = client.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                .toEntity(MessageModel.class)
+                .toEntity(PvMessageModel.class)
+                .block();
+        if (response == null) {
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
+            return null;
+        }
+        return response.getBody();
+    }
+
+    private GroupMessageModel getGroupMessage(Long groupMessageId) {
+        String url = UrlPaths.GROUP_MESSAGES_URL_PATH + SLASH + groupMessageId;
+        ResponseEntity<GroupMessageModel> response = client.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(GroupMessageModel.class)
                 .block();
         if (response == null) {
             System.out.println(Commands.PLEASE_TRY_AGAIN);
@@ -448,14 +647,30 @@ public class CommandProcessor {
         return response.getBody();
     }
 
-    private ChatModel getChat(Long chatId) {
-        String url = UrlPaths.CHATS_URL_PATH + SLASH + chatId;
-        ResponseEntity<ChatModel> response = client.get()
+    private PvModel getPv(Long pvId) {
+        String url = UrlPaths.PVS_URL_PATH + SLASH + pvId;
+        ResponseEntity<PvModel> response = client.get()
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
-                .toEntity(ChatModel.class)
+                .toEntity(PvModel.class)
+                .block();
+        if (response == null) {
+            System.out.println(Commands.PLEASE_TRY_AGAIN);
+            return null;
+        }
+        return response.getBody();
+    }
+
+    private GroupModel getGroup(Long groupId) {
+        String url = UrlPaths.GROUPS_URL_PATH + SLASH + groupId;
+        ResponseEntity<GroupModel> response = client.get()
+                .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(GroupModel.class)
                 .block();
         if (response == null) {
             System.out.println(Commands.PLEASE_TRY_AGAIN);
