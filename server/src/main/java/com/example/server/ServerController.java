@@ -10,6 +10,7 @@ import com.example.server.repository.GroupMessageRepository;
 import com.example.server.repository.GroupRepository;
 import com.example.server.repository.PvMessageRepository;
 import com.example.server.repository.PvRepository;
+import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import com.example.server.repository.UserRepository;
 import org.apache.commons.lang.RandomStringUtils;
@@ -21,6 +22,7 @@ import org.example.model.PvModel;
 import org.example.model.UserModel;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,8 +32,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @AllArgsConstructor
@@ -43,6 +50,22 @@ public class ServerController {
     private final PvRepository pvRepository;
     private final GroupRepository groupRepository;
     private static final int TOKEN_SIZE = 16;
+    private final Map<String, SseEmitter> pvEmitters = new HashMap<>();
+    private final Map<String, SseEmitter> groupEmitters = new HashMap<>();
+
+    @GetMapping(value = "pvNotifications/{username}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter getPvNotifications(@PathVariable String username) {
+        SseEmitter pvEmitter = new SseEmitter(Long.MAX_VALUE);
+        pvEmitters.put(username, pvEmitter);
+        return pvEmitter;
+    }
+
+    @GetMapping(value = "groupNotifications/{username}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter getGroupNotifications(@PathVariable String username) {
+        SseEmitter groupEmitter = new SseEmitter(Long.MAX_VALUE);
+        groupEmitters.put(username, groupEmitter);
+        return groupEmitter;
+    }
 
     @PostMapping("/signUp")
     public ResponseEntity<String> signUp(@RequestBody String username) {
@@ -60,6 +83,17 @@ public class ServerController {
     @GetMapping("signIn/{username}")
     public ResponseEntity<UserModel> signIn(@PathVariable String username) {
         return getUser(username);
+    }
+
+    @GetMapping("signOut/{username}")
+    public ResponseEntity<String> signOut(@PathVariable String username) {
+        Optional<User> user = userRepository.findById(username);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
+        }
+        pvEmitters.remove(username);
+        groupEmitters.remove(username);
+        return new ResponseEntity<>(Commands.SUCCESSFULLY_SIGNED_OUT, HttpStatus.OK);
     }
 
     @GetMapping("users/{username}")
@@ -170,6 +204,14 @@ public class ServerController {
         pvMessageRepository.save(pvMessage);
         pv.get().getPvMessages().add(pvMessage);
         pvRepository.save(pv.get());
+        String peerUsername = pv.get().getFirst().equals(sender.get().getUsername()) ? pv.get().getSecond() : pv.get().getFirst();
+        if (pvEmitters.containsKey(peerUsername)) {
+            try {
+                pvEmitters.get(peerUsername).send(pvMessage.toPvMessageModel());
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+        }
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }
 
@@ -206,6 +248,17 @@ public class ServerController {
         groupMessageRepository.save(groupMessage);
         group.get().getGroupMessages().add(groupMessage);
         groupRepository.save(group.get());
+        List<String> others = group.get().getMembers();
+        others.remove(groupMessage.getSender());
+        for (String peerUsername : others) {
+            if (groupEmitters.containsKey(peerUsername)) {
+                try {
+                    groupEmitters.get(peerUsername).send(groupMessage.toGroupMessageModel());
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
         return new ResponseEntity<>(Commands.SENT, HttpStatus.OK);
     }
 
@@ -291,7 +344,8 @@ public class ServerController {
         if (pvMessage.isEmpty()) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-        if (!user.get().getPvs().contains(pvRepository.findById(pvMessage.get().getPvId()).get())) {
+        Pv pv = pvRepository.findById(pvMessage.get().getPvId()).get();
+        if (!user.get().getPvs().contains(pv)) {
             return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(pvMessage.get(), HttpStatus.OK);
@@ -307,7 +361,8 @@ public class ServerController {
         if (groupMessage.isEmpty()) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
-        if (!user.get().getPvs().contains(pvRepository.findById(groupMessage.get().getGroupId()).get())) {
+        Group group = groupRepository.findById(groupMessage.get().getGroupId()).get();
+        if (!user.get().getGroups().contains(group)) {
             return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(groupMessage.get(), HttpStatus.OK);

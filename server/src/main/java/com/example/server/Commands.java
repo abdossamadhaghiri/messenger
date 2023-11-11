@@ -5,6 +5,7 @@ public class Commands {
     public static final String USERNAME_ALREADY_EXISTS = "the username already exists";
     public static final String USERNAME_DOESNT_EXIST = "the username doesnt exist";
     public static final String SUCCESSFULLY_SIGNED_UP = "successfully signed up";
+    public static final String SUCCESSFULLY_SIGNED_OUT = "successfully signed out";
     public static final String CHAT_DOESNT_EXIST = "the chat doesnt exist";
     public static final String CHAT_IS_NOT_YOUR_CHAT = "the chat isn't your chat!";
     public static final String REPLIED_MESSAGE_DOESNT_EXIST = "the replied message doesnt exist!";

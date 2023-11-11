@@ -12,6 +12,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
@@ -63,6 +65,8 @@ public class CommandProcessor {
     private void continueWithOnlineUser() {
         boolean flag = true;
         while (flag) {
+            Disposable pvNotifications = getPvNotificationsInMainMenu();
+            Disposable groupNotifications = getGroupNotificationsInMainMenu();
             UserModel userModel = getUser(onlineUser.getUsername());
             if (userModel == null) {
                 Logger.print(Commands.PLEASE_TRY_AGAIN);
@@ -77,9 +81,45 @@ public class CommandProcessor {
                 case "1" -> selectChatById();
                 case "2" -> enterPvByUsername();
                 case "3" -> createGroup();
-                case "4" -> flag = false;
+                case "4" -> {
+                    flag = false;
+                    pvNotifications.dispose();
+                    groupNotifications.dispose();
+                    signOut(onlineUser.getUsername());
+                }
                 default -> Logger.print(Commands.INVALID_COMMAND);
             }
+        }
+    }
+
+    private Disposable getPvNotificationsInMainMenu() {
+        Flux<PvMessageModel> flux = client.get()
+                .uri("pvNotifications" + SLASH + onlineUser.getUsername())
+                .retrieve()
+                .bodyToFlux(PvMessageModel.class);
+        return flux.subscribe(pvMessageModel -> Logger.printGreen("a new message from " + pvMessageModel.getSender() + " received!"));
+    }
+
+    private Disposable getGroupNotificationsInMainMenu() {
+        Flux<GroupMessageModel> flux = client.get()
+                .uri("groupNotifications" + SLASH + onlineUser.getUsername())
+                .retrieve()
+                .bodyToFlux(GroupMessageModel.class);
+        return flux.subscribe(groupMessageModel -> Logger.printGreen("a new message from "
+                + groupMessageModel.getSender() + " in group with id " + groupMessageModel.getGroupId() + " received!"));
+    }
+
+    private void signOut(String username) {
+        ResponseEntity<String> response = client.get()
+                .uri("signOut" + SLASH + username)
+                .retrieve()
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
+                .toEntity(String.class)
+                .block();
+        if (response != null) {
+            Logger.print(response.getBody());
+        } else {
+            Logger.print(Commands.PLEASE_TRY_AGAIN);
         }
     }
 
@@ -175,6 +215,7 @@ public class CommandProcessor {
     }
 
     private void pvChat(Long pvId) {
+        Disposable pvNotifications = getPvNotificationsInChat(pvId);
         boolean flag = true;
         while (flag) {
             PvModel pv = getPv(pvId);
@@ -223,13 +264,31 @@ public class CommandProcessor {
                         Logger.print(Commands.INVALID_MESSAGE_ID);
                     }
                 }
-                case "5" -> flag = false;
+                case "5" -> {
+                    flag = false;
+                    pvNotifications.dispose();
+                }
                 default -> Logger.print(Commands.INVALID_COMMAND);
             }
         }
     }
 
+    private Disposable getPvNotificationsInChat(Long pvId) {
+        Flux<PvMessageModel> flux = client.get()
+                .uri("pvNotifications" + SLASH + onlineUser.getUsername())
+                .retrieve()
+                .bodyToFlux(PvMessageModel.class);
+        return flux.subscribe(pvMessageModel -> {
+            if (pvMessageModel.getPvId() == pvId) {
+                printMessageInChat(pvMessageModel);
+            } else {
+                Logger.printGreen("a new message from " + pvMessageModel.getSender() + " received!");
+            }
+        });
+    }
+
     private void groupChat(Long groupId) {
+        Disposable groupNotifications = getGroupNotificationsInChat(groupId);
         boolean flag = true;
         while (flag) {
             GroupModel group = getGroup(groupId);
@@ -248,9 +307,9 @@ public class CommandProcessor {
                 }
                 case "2" -> {
                     Logger.print(Commands.ENTER_YOUR_MESSAGE_ID);
-                    String pvMessageId = scanner.nextLine();
-                    if (isNumeric(pvMessageId)) {
-                        Logger.print(deleteGroupMessage(Long.valueOf(pvMessageId), groupId));
+                    String groupMessageId = scanner.nextLine();
+                    if (isNumeric(groupMessageId)) {
+                        Logger.print(deleteGroupMessage(Long.valueOf(groupMessageId), groupId));
                     } else {
                         Logger.print(Commands.INVALID_MESSAGE_ID);
                     }
@@ -278,10 +337,28 @@ public class CommandProcessor {
                         Logger.print(Commands.INVALID_MESSAGE_ID);
                     }
                 }
-                case "5" -> flag = false;
+                case "5" -> {
+                    flag = false;
+                    groupNotifications.dispose();
+                }
                 default -> Logger.print(Commands.INVALID_COMMAND);
             }
         }
+    }
+
+    private Disposable getGroupNotificationsInChat(Long groupId) {
+        Flux<GroupMessageModel> flux = client.get()
+                .uri("groupNotifications" + SLASH + onlineUser.getUsername())
+                .retrieve()
+                .bodyToFlux(GroupMessageModel.class);
+        return flux.subscribe(groupMessageModel -> {
+            if (groupMessageModel.getGroupId() == groupId) {
+                printMessageInChat(groupMessageModel);
+            } else {
+                Logger.printGreen("a new message from " + groupMessageModel.getSender() + " in group with id "
+                        + groupMessageModel.getGroupId() + " received!");
+            }
+        });
     }
 
     private void printMessageInChat(MessageModel messageModel) {
@@ -307,6 +384,7 @@ public class CommandProcessor {
     }
 
     private Long getPvId(String username) {
+        onlineUser = getUser(onlineUser.getUsername());
         for (PvModel pv : onlineUser.getPvs()) {
             if (getPeer(pv).equals(username)) {
                 return pv.getId();
@@ -394,7 +472,7 @@ public class CommandProcessor {
                 .uri(url)
                 .bodyValue(pvMessageModel)
                 .retrieve()
-                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
                 .block();
         return response != null ? response.getBody() : Commands.PLEASE_TRY_AGAIN;
@@ -475,7 +553,7 @@ public class CommandProcessor {
                 .uri(url)
                 .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
-                .onStatus(status -> status == HttpStatus.BAD_REQUEST, clientResponse -> Mono.empty())
+                .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
                 .block();
         if (response == null) {
