@@ -279,7 +279,7 @@ public class CommandProcessor {
                 .retrieve()
                 .bodyToFlux(PvMessageModel.class);
         return flux.subscribe(pvMessageModel -> {
-            if (pvMessageModel.getPvId() == pvId) {
+            if (pvMessageModel.getPvId().equals(pvId)) {
                 printMessageInChat(pvMessageModel);
             } else {
                 Logger.printGreen("a new message from " + pvMessageModel.getSender() + " received!");
@@ -352,7 +352,7 @@ public class CommandProcessor {
                 .retrieve()
                 .bodyToFlux(GroupMessageModel.class);
         return flux.subscribe(groupMessageModel -> {
-            if (groupMessageModel.getGroupId() == groupId) {
+            if (groupMessageModel.getGroupId().equals(groupId)) {
                 printMessageInChat(groupMessageModel);
             } else {
                 Logger.printGreen("a new message from " + groupMessageModel.getSender() + " in group with id "
@@ -385,6 +385,9 @@ public class CommandProcessor {
 
     private Long getPvId(String username) {
         onlineUser = getUser(onlineUser.getUsername());
+        if (onlineUser == null) {
+            return -1L;
+        }
         for (PvModel pv : onlineUser.getPvs()) {
             if (getPeer(pv).equals(username)) {
                 return pv.getId();
