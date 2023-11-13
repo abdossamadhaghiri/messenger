@@ -154,11 +154,16 @@ public class CommandProcessor {
         String username = scanner.nextLine();
         UserModel peer = getUser(username);
         if (peer != null) {
-            Long pvId = getPvId(username);
-            if (pvId != -1L) {
-                pvChat(pvId);
-            } else {
-                Logger.print(Commands.PLEASE_TRY_AGAIN);
+            if (!peer.getUsername().equals(onlineUser.getUsername())) {
+                Long pvId = getPvId(username);
+                if (pvId != -1L) {
+                    pvChat(pvId);
+                } else {
+                    Logger.print(Commands.PLEASE_TRY_AGAIN);
+                }
+            }
+            else {
+                Logger.print(Commands.ITS_YOUR_USERNAME);
             }
         } else {
             Logger.print(Commands.USERNAME_DOESNT_EXIST);
@@ -190,8 +195,10 @@ public class CommandProcessor {
             if (response.getStatusCode().equals(HttpStatus.OK)) {
                 onlineUser = response.getBody();
                 return true;
-            } else {
+            } else if (response.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
                 Logger.print(Commands.USERNAME_DOESNT_EXIST);
+            } else {
+                Logger.print(Commands.THIS_USER_IS_ONLINE_NOW);
             }
         } else {
             Logger.print(Commands.PLEASE_TRY_AGAIN);
@@ -666,12 +673,16 @@ public class CommandProcessor {
                 String username = scanner.nextLine();
                 UserModel peer = getUser(username);
                 if (peer != null) {
-                    Long destinationPvId = getPvId(username);
-                    if (destinationPvId != -1L) {
-                        Logger.print(sendPvMessage(sourceMessage.getText(), destinationPvId,
-                                0L, sourceMessage.getSender()));
+                    if (!peer.getUsername().equals(onlineUser.getUsername())) {
+                        Long destinationPvId = getPvId(username);
+                        if (destinationPvId != -1L) {
+                            Logger.print(sendPvMessage(sourceMessage.getText(), destinationPvId,
+                                    0L, sourceMessage.getSender()));
+                        } else {
+                            Logger.print(Commands.PLEASE_TRY_AGAIN);
+                        }
                     } else {
-                        Logger.print(Commands.PLEASE_TRY_AGAIN);
+                        Logger.print(Commands.ITS_YOUR_USERNAME);
                     }
                 } else {
                     Logger.print(Commands.USERNAME_DOESNT_EXIST);

@@ -10,7 +10,6 @@ import com.example.server.repository.GroupMessageRepository;
 import com.example.server.repository.GroupRepository;
 import com.example.server.repository.PvMessageRepository;
 import com.example.server.repository.PvRepository;
-import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import com.example.server.repository.UserRepository;
 import org.apache.commons.lang.RandomStringUtils;
@@ -56,6 +55,9 @@ public class ServerController {
     @GetMapping(value = "pvNotifications/{username}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter getPvNotifications(@PathVariable String username) {
         SseEmitter pvEmitter = new SseEmitter(Long.MAX_VALUE);
+        if (pvEmitters.containsKey(username)) {
+            pvEmitters.get(username).complete();
+        }
         pvEmitters.put(username, pvEmitter);
         return pvEmitter;
     }
@@ -63,6 +65,9 @@ public class ServerController {
     @GetMapping(value = "groupNotifications/{username}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter getGroupNotifications(@PathVariable String username) {
         SseEmitter groupEmitter = new SseEmitter(Long.MAX_VALUE);
+        if (groupEmitters.containsKey(username)) {
+            groupEmitters.get(username).complete();
+        }
         groupEmitters.put(username, groupEmitter);
         return groupEmitter;
     }
@@ -82,6 +87,9 @@ public class ServerController {
 
     @GetMapping("signIn/{username}")
     public ResponseEntity<UserModel> signIn(@PathVariable String username) {
+        if (pvEmitters.containsKey(username)) {
+            return new ResponseEntity<>(null, HttpStatus.CONFLICT);
+        }
         return getUser(username);
     }
 
@@ -91,6 +99,8 @@ public class ServerController {
         if (user.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
         }
+        pvEmitters.get(username).complete();
+        groupEmitters.get(username).complete();
         pvEmitters.remove(username);
         groupEmitters.remove(username);
         return new ResponseEntity<>(Commands.SUCCESSFULLY_SIGNED_OUT, HttpStatus.OK);
