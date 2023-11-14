@@ -3,6 +3,7 @@ package com.example.client;
 public class Logger {
     private static final String ANSI_YELLOW = "\u001B[33m";
     private static final String ANSI_GREEN = "\u001B[32m";
+    private static final String ANSI_RED = "\u001B[31m";
     private static final String ANSI_RESET = "\u001B[0m";
 
     public static void printYellow(String text) {
@@ -11,6 +12,10 @@ public class Logger {
 
     public static void printGreen(String text) {
         System.out.println(ANSI_GREEN + text + ANSI_RESET);
+    }
+
+    public static void printRed(String text) {
+        System.out.println(ANSI_RED + text + ANSI_RESET);
     }
 
     public static void print(String text) {

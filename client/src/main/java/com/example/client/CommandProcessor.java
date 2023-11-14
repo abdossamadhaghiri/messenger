@@ -47,7 +47,7 @@ public class CommandProcessor {
                 case "1" -> {
                     Logger.print("enter your username: ");
                     String username = scanner.nextLine();
-                    Logger.print(signUp(username));
+                    Logger.printRed(signUp(username));
                 }
                 case "2" -> {
                     Logger.print("enter your username: ");
@@ -57,7 +57,7 @@ public class CommandProcessor {
                     }
                 }
                 case "3" -> flag = false;
-                default -> Logger.print(Commands.INVALID_COMMAND);
+                default -> Logger.printRed(Commands.INVALID_COMMAND);
             }
         }
     }
@@ -69,7 +69,7 @@ public class CommandProcessor {
             Disposable groupNotifications = getGroupNotificationsInMainMenu();
             UserModel userModel = getUser(onlineUser.getUsername());
             if (userModel == null) {
-                Logger.print(Commands.PLEASE_TRY_AGAIN);
+                Logger.printRed(Commands.PLEASE_TRY_AGAIN);
                 break;
             }
             onlineUser = userModel;
@@ -87,7 +87,7 @@ public class CommandProcessor {
                     groupNotifications.dispose();
                     signOut(onlineUser.getUsername());
                 }
-                default -> Logger.print(Commands.INVALID_COMMAND);
+                default -> Logger.printRed(Commands.INVALID_COMMAND);
             }
         }
     }
@@ -117,9 +117,9 @@ public class CommandProcessor {
                 .toEntity(String.class)
                 .block();
         if (response != null) {
-            Logger.print(response.getBody());
+            Logger.printRed(response.getBody());
         } else {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
         }
     }
 
@@ -133,7 +133,7 @@ public class CommandProcessor {
                 if (isNumeric(input) && isOldGroup(Long.valueOf(input))) {
                     groupChat(Long.valueOf(input));
                 } else {
-                    Logger.print(Commands.INVALID_CHAT_ID);
+                    Logger.printRed(Commands.INVALID_CHAT_ID);
                 }
             }
             case "2" -> {
@@ -142,10 +142,10 @@ public class CommandProcessor {
                 if (isNumeric(input) && isOldPv(Long.valueOf(input))) {
                     pvChat(Long.valueOf(input));
                 } else {
-                    Logger.print(Commands.INVALID_CHAT_ID);
+                    Logger.printRed(Commands.INVALID_CHAT_ID);
                 }
             }
-            default -> Logger.print(Commands.INVALID_COMMAND);
+            default -> Logger.printRed(Commands.INVALID_COMMAND);
         }
     }
 
@@ -159,14 +159,14 @@ public class CommandProcessor {
                 if (pvId != -1L) {
                     pvChat(pvId);
                 } else {
-                    Logger.print(Commands.PLEASE_TRY_AGAIN);
+                    Logger.printRed(Commands.PLEASE_TRY_AGAIN);
                 }
             }
             else {
-                Logger.print(Commands.ITS_YOUR_USERNAME);
+                Logger.printRed(Commands.ITS_YOUR_USERNAME);
             }
         } else {
-            Logger.print(Commands.USERNAME_DOESNT_EXIST);
+            Logger.printRed(Commands.USERNAME_DOESNT_EXIST);
         }
     }
 
@@ -196,12 +196,12 @@ public class CommandProcessor {
                 onlineUser = response.getBody();
                 return true;
             } else if (response.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
-                Logger.print(Commands.USERNAME_DOESNT_EXIST);
+                Logger.printRed(Commands.USERNAME_DOESNT_EXIST);
             } else {
-                Logger.print(Commands.THIS_USER_IS_ONLINE_NOW);
+                Logger.printRed(Commands.THIS_USER_IS_ONLINE_NOW);
             }
         } else {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
         }
         return false;
     }
@@ -227,7 +227,7 @@ public class CommandProcessor {
         while (flag) {
             PvModel pv = getPv(pvId);
             if (pv == null) {
-                Logger.print(Commands.PLEASE_TRY_AGAIN);
+                Logger.printRed(Commands.PLEASE_TRY_AGAIN);
                 break;
             }
             pv.getPvMessages().forEach(this::printMessageInChat);
@@ -237,24 +237,24 @@ public class CommandProcessor {
                 case "1" -> {
                     Logger.print("write your message:");
                     String text = scanner.nextLine();
-                    Logger.print(writeMessageInPv(text, pvId));
+                    Logger.printRed(writeMessageInPv(text, pvId));
                 }
                 case "2" -> {
                     Logger.print(Commands.ENTER_YOUR_MESSAGE_ID);
                     String pvMessageId = scanner.nextLine();
                     if (isNumeric(pvMessageId)) {
-                        Logger.print(deletePvMessage(Long.valueOf(pvMessageId), pvId));
+                        Logger.printRed(deletePvMessage(Long.valueOf(pvMessageId), pvId));
                     } else {
-                        Logger.print(Commands.INVALID_MESSAGE_ID);
+                        Logger.printRed(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "3" -> {
                     Logger.print(Commands.ENTER_YOUR_MESSAGE_ID);
                     String messageId = scanner.nextLine();
                     if (isNumeric(messageId)) {
-                        Logger.print(editPvMessage(Long.valueOf(messageId), pvId));
+                        Logger.printRed(editPvMessage(Long.valueOf(messageId), pvId));
                     } else {
-                        Logger.print(Commands.INVALID_MESSAGE_ID);
+                        Logger.printRed(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "4" -> {
@@ -265,17 +265,17 @@ public class CommandProcessor {
                         if (pvMessage != null && pvMessage.getPvId().equals(pvId)) {
                             forward(pvMessage);
                         } else {
-                            Logger.print(Commands.INVALID_MESSAGE_ID);
+                            Logger.printRed(Commands.INVALID_MESSAGE_ID);
                         }
                     } else {
-                        Logger.print(Commands.INVALID_MESSAGE_ID);
+                        Logger.printRed(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "5" -> {
                     flag = false;
                     pvNotifications.dispose();
                 }
-                default -> Logger.print(Commands.INVALID_COMMAND);
+                default -> Logger.printRed(Commands.INVALID_COMMAND);
             }
         }
     }
@@ -300,7 +300,7 @@ public class CommandProcessor {
         while (flag) {
             GroupModel group = getGroup(groupId);
             if (group == null) {
-                Logger.print(Commands.PLEASE_TRY_AGAIN);
+                Logger.printRed(Commands.PLEASE_TRY_AGAIN);
                 break;
             }
             group.getGroupMessages().forEach(this::printMessageInChat);
@@ -310,24 +310,24 @@ public class CommandProcessor {
                 case "1" -> {
                     Logger.print("write your message:");
                     String text = scanner.nextLine();
-                    Logger.print(writeMessageInGroup(text, groupId));
+                    Logger.printRed(writeMessageInGroup(text, groupId));
                 }
                 case "2" -> {
                     Logger.print(Commands.ENTER_YOUR_MESSAGE_ID);
                     String groupMessageId = scanner.nextLine();
                     if (isNumeric(groupMessageId)) {
-                        Logger.print(deleteGroupMessage(Long.valueOf(groupMessageId), groupId));
+                        Logger.printRed(deleteGroupMessage(Long.valueOf(groupMessageId), groupId));
                     } else {
-                        Logger.print(Commands.INVALID_MESSAGE_ID);
+                        Logger.printRed(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "3" -> {
                     Logger.print(Commands.ENTER_YOUR_MESSAGE_ID);
                     String messageId = scanner.nextLine();
                     if (isNumeric(messageId)) {
-                        Logger.print(editGroupMessage(Long.valueOf(messageId), groupId));
+                        Logger.printRed(editGroupMessage(Long.valueOf(messageId), groupId));
                     } else {
-                        Logger.print(Commands.INVALID_MESSAGE_ID);
+                        Logger.printRed(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "4" -> {
@@ -338,17 +338,17 @@ public class CommandProcessor {
                         if (groupMessage != null && groupMessage.getGroupId().equals(groupId)) {
                             forward(groupMessage);
                         } else {
-                            Logger.print(Commands.INVALID_MESSAGE_ID);
+                            Logger.printRed(Commands.INVALID_MESSAGE_ID);
                         }
                     } else {
-                        Logger.print(Commands.INVALID_MESSAGE_ID);
+                        Logger.printRed(Commands.INVALID_MESSAGE_ID);
                     }
                 }
                 case "5" -> {
                     flag = false;
                     groupNotifications.dispose();
                 }
-                default -> Logger.print(Commands.INVALID_COMMAND);
+                default -> Logger.printRed(Commands.INVALID_COMMAND);
             }
         }
     }
@@ -522,16 +522,16 @@ public class CommandProcessor {
                     String username = scanner.nextLine();
                     UserModel userModel = getUser(username);
                     if (userModel == null || userModel.getUsername() == null) {
-                        Logger.print(Commands.USERNAME_DOESNT_EXIST);
+                        Logger.printRed(Commands.USERNAME_DOESNT_EXIST);
                     } else if (members.contains(username)) {
-                        Logger.print("already joined!");
+                        Logger.printRed("already joined!");
                     } else {
-                        Logger.print(username + " successfully added.");
+                        Logger.printRed(username + " successfully added.");
                         members.add(username);
                     }
                 }
                 case "2" -> flag = false;
-                default -> Logger.print(Commands.INVALID_COMMAND);
+                default -> Logger.printRed(Commands.INVALID_COMMAND);
             }
         }
         String url = UrlPaths.GROUPS_URL_PATH;
@@ -544,12 +544,12 @@ public class CommandProcessor {
                 .block();
         if (response != null) {
             if (response.getStatusCode().equals(HttpStatus.CREATED)) {
-                Logger.print("the group successfully created!");
+                Logger.printRed("the group successfully created!");
             } else {
-                Logger.print("invalid group content!");
+                Logger.printRed("invalid group content!");
             }
         } else {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
         }
     }
 
@@ -648,10 +648,10 @@ public class CommandProcessor {
                         String input = scanner.nextLine();
                         if (isNumeric(input) && isOldGroup(Long.valueOf(input))) {
                             Long destinationGroupId = Long.valueOf(input);
-                            Logger.print(sendGroupMessage(sourceMessage.getText(), destinationGroupId,
+                            Logger.printRed(sendGroupMessage(sourceMessage.getText(), destinationGroupId,
                                     0L, sourceMessage.getSender()));
                         } else {
-                            Logger.print(Commands.INVALID_CHAT_ID);
+                            Logger.printRed(Commands.INVALID_CHAT_ID);
                         }
                     }
                     case "2" -> {
@@ -659,13 +659,13 @@ public class CommandProcessor {
                         String input = scanner.nextLine();
                         if (isNumeric(input) && isOldPv(Long.valueOf(input))) {
                             Long destinationPvId = Long.valueOf(input);
-                            Logger.print(sendPvMessage(sourceMessage.getText(), destinationPvId,
+                            Logger.printRed(sendPvMessage(sourceMessage.getText(), destinationPvId,
                                     0L, sourceMessage.getSender()));
                         } else {
-                            Logger.print(Commands.INVALID_CHAT_ID);
+                            Logger.printRed(Commands.INVALID_CHAT_ID);
                         }
                     }
-                    default -> Logger.print(Commands.INVALID_COMMAND);
+                    default -> Logger.printRed(Commands.INVALID_COMMAND);
                 }
             }
             case "2" -> {
@@ -676,19 +676,19 @@ public class CommandProcessor {
                     if (!peer.getUsername().equals(onlineUser.getUsername())) {
                         Long destinationPvId = getPvId(username);
                         if (destinationPvId != -1L) {
-                            Logger.print(sendPvMessage(sourceMessage.getText(), destinationPvId,
+                            Logger.printRed(sendPvMessage(sourceMessage.getText(), destinationPvId,
                                     0L, sourceMessage.getSender()));
                         } else {
-                            Logger.print(Commands.PLEASE_TRY_AGAIN);
+                            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
                         }
                     } else {
-                        Logger.print(Commands.ITS_YOUR_USERNAME);
+                        Logger.printRed(Commands.ITS_YOUR_USERNAME);
                     }
                 } else {
-                    Logger.print(Commands.USERNAME_DOESNT_EXIST);
+                    Logger.printRed(Commands.USERNAME_DOESNT_EXIST);
                 }
             }
-            default -> Logger.print(Commands.INVALID_COMMAND);
+            default -> Logger.printRed(Commands.INVALID_COMMAND);
         }
     }
 
@@ -702,7 +702,7 @@ public class CommandProcessor {
                 .toEntity(PvMessageModel.class)
                 .block();
         if (response == null) {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
             return null;
         }
         return response.getBody();
@@ -718,7 +718,7 @@ public class CommandProcessor {
                 .toEntity(GroupMessageModel.class)
                 .block();
         if (response == null) {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
             return null;
         }
         return response.getBody();
@@ -733,7 +733,7 @@ public class CommandProcessor {
                 .toEntity(UserModel.class)
                 .block();
         if (response == null) {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
             return null;
         }
         return response.getBody();
@@ -749,7 +749,7 @@ public class CommandProcessor {
                 .toEntity(PvModel.class)
                 .block();
         if (response == null) {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
             return null;
         }
         return response.getBody();
@@ -765,7 +765,7 @@ public class CommandProcessor {
                 .toEntity(GroupModel.class)
                 .block();
         if (response == null) {
-            Logger.print(Commands.PLEASE_TRY_AGAIN);
+            Logger.printRed(Commands.PLEASE_TRY_AGAIN);
             return null;
         }
         return response.getBody();
