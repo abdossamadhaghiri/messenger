@@ -10,5 +10,6 @@ public class Commands {
     public static final String ENTER_YOUR_MESSAGE_ID = "enter your message id:";
     public static final String THIS_USER_IS_ONLINE_NOW = "this user is online now!";
     public static final String ITS_YOUR_USERNAME = "it's your username!";
+    public static final String TEXT_IS_TOO_LONG = "text is too long!";
 
 }

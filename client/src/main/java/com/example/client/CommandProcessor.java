@@ -63,6 +63,8 @@ public class CommandProcessor {
     }
 
     private void continueWithOnlineUser() {
+        Thread thread = new Thread(() -> signOut(onlineUser.getUsername()));
+        Runtime.getRuntime().addShutdownHook(thread);
         boolean flag = true;
         while (flag) {
             Disposable pvNotifications = getPvNotificationsInMainMenu();
@@ -82,6 +84,7 @@ public class CommandProcessor {
                 case "2" -> enterPvByUsername();
                 case "3" -> createGroup();
                 case "4" -> {
+                    Runtime.getRuntime().removeShutdownHook(thread);
                     flag = false;
                     pvNotifications.dispose();
                     groupNotifications.dispose();
@@ -470,6 +473,9 @@ public class CommandProcessor {
     }
 
     private String sendPvMessage(String text, Long pvId, Long repliedMessageId, String forwardedFrom) {
+        if (Checker.isTooLong(text)) {
+            return Commands.TEXT_IS_TOO_LONG;
+        }
         PvMessageModel pvMessageModel = PvMessageModel.builder()
                 .text(text)
                 .sender(onlineUser.getUsername())
@@ -489,6 +495,9 @@ public class CommandProcessor {
     }
 
     private String sendGroupMessage(String text, Long groupId, Long repliedMessageId, String forwardedFrom) {
+        if (Checker.isTooLong(text)) {
+            return Commands.TEXT_IS_TOO_LONG;
+        }
         GroupMessageModel groupMessageModel = GroupMessageModel.builder()
                 .text(text)
                 .sender(onlineUser.getUsername())
