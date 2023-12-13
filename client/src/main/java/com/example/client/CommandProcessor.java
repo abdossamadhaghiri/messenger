@@ -115,6 +115,7 @@ public class CommandProcessor {
     private void signOut(String username) {
         ResponseEntity<String> response = client.get()
                 .uri("signOut" + SLASH + username)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(String.class)
@@ -412,6 +413,7 @@ public class CommandProcessor {
         PvModel pvModel = PvModel.builder().first(onlineUser.getUsername()).second(peerUsername).build();
         ResponseEntity<PvModel> response = client.post()
                 .uri(UrlPaths.PVS_URL_PATH)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .bodyValue(pvModel)
                 .retrieve()
                 .toEntity(PvModel.class)
@@ -486,6 +488,7 @@ public class CommandProcessor {
         String url = UrlPaths.PV_MESSAGES_URL_PATH;
         ResponseEntity<String> response = client.post()
                 .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .bodyValue(pvMessageModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
@@ -508,6 +511,7 @@ public class CommandProcessor {
         String url = UrlPaths.GROUP_MESSAGES_URL_PATH;
         ResponseEntity<String> response = client.post()
                 .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .bodyValue(groupMessageModel)
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
@@ -547,6 +551,7 @@ public class CommandProcessor {
         GroupModel groupModel = GroupModel.builder().owner(onlineUser.getUsername()).members(members).name(name).build();
         ResponseEntity<GroupModel> response = client.post()
                 .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .bodyValue(groupModel)
                 .retrieve()
                 .toEntity(GroupModel.class)
@@ -737,6 +742,7 @@ public class CommandProcessor {
         String url = UrlPaths.USERS_URL_PATH + SLASH + username;
         ResponseEntity<UserModel> response = client.get()
                 .uri(url)
+                .header(HttpHeaders.AUTHORIZATION, onlineUser.getToken())
                 .retrieve()
                 .onStatus(status -> status != HttpStatus.OK, clientResponse -> Mono.empty())
                 .toEntity(UserModel.class)

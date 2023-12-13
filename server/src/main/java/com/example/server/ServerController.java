@@ -90,11 +90,17 @@ public class ServerController {
         if (pvEmitters.containsKey(username)) {
             return new ResponseEntity<>(null, HttpStatus.CONFLICT);
         }
-        return getUser(username);
+        Optional<User> user = userRepository.findById(username);
+        return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
     }
 
     @GetMapping("signOut/{username}")
-    public ResponseEntity<String> signOut(@PathVariable String username) {
+    public ResponseEntity<String> signOut(@PathVariable String username, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> userByToken = userRepository.findByToken(token);
+        if (userByToken.isEmpty()) {
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
+        }
         Optional<User> user = userRepository.findById(username);
         if (user.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
@@ -107,14 +113,22 @@ public class ServerController {
     }
 
     @GetMapping("users/{username}")
-    public ResponseEntity<UserModel> getUser(@PathVariable String username) {
+    public ResponseEntity<UserModel> getUser(@PathVariable String username, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> userByToken = userRepository.findByToken(token);
+        if (userByToken.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
         Optional<User> user = userRepository.findById(username);
         return user.map(value -> new ResponseEntity<>(value.toUserModel(), HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
     }
 
     @PostMapping("/pvs")
-    public ResponseEntity<PvModel> newPv(@RequestBody PvModel pvModel) {
+    public ResponseEntity<PvModel> newPv(@RequestBody PvModel pvModel, @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
         Optional<User> firstUser = userRepository.findById(pvModel.getFirst());
         Optional<User> secondUser = userRepository.findById(pvModel.getSecond());
         if (firstUser.isEmpty() || secondUser.isEmpty()) {
@@ -133,7 +147,12 @@ public class ServerController {
     }
 
     @PostMapping("/groups")
-    public ResponseEntity<ChatModel> newGroup(@RequestBody GroupModel groupModel) {
+    public ResponseEntity<ChatModel> newGroup(@RequestBody GroupModel groupModel,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
         if (groupModel.getMembers().stream().anyMatch(username -> !userRepository.existsById(username))) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
@@ -143,10 +162,10 @@ public class ServerController {
                 .name(groupModel.getName())
                 .build();
         groupRepository.save(group);
-        for (String member : group.getMembers()) {
-            User user = userRepository.findById(member).get();
-            user.getGroups().add(group);
-            userRepository.save(user);
+        for (String memberUsername : group.getMembers()) {
+            User member = userRepository.findById(memberUsername).get();
+            member.getGroups().add(group);
+            userRepository.save(member);
         }
         return new ResponseEntity<>(group.toGroupModel(), HttpStatus.CREATED);
     }
@@ -182,7 +201,12 @@ public class ServerController {
     }
 
     @PostMapping("/pvMessages")
-    public ResponseEntity<String> newPvMessage(@RequestBody PvMessageModel pvMessageModel) {
+    public ResponseEntity<String> newPvMessage(@RequestBody PvMessageModel pvMessageModel,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
+        }
         Optional<User> sender = userRepository.findById(pvMessageModel.getSender());
         if (sender.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
@@ -226,7 +250,12 @@ public class ServerController {
     }
 
     @PostMapping("/groupMessages")
-    public ResponseEntity<String> newGroupMessage(@RequestBody GroupMessageModel groupMessageModel) {
+    public ResponseEntity<String> newGroupMessage(@RequestBody GroupMessageModel groupMessageModel,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        Optional<User> user = userRepository.findByToken(token);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>(Commands.INVALID_TOKEN, HttpStatus.UNAUTHORIZED);
+        }
         Optional<User> sender = userRepository.findById(groupMessageModel.getSender());
         if (sender.isEmpty()) {
             return new ResponseEntity<>(Commands.USERNAME_DOESNT_EXIST, HttpStatus.NOT_FOUND);
